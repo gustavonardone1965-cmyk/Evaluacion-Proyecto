@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador Monte Carlo · OVOCOR Fase 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+ --paper:#F3F4F9; --surface:#FFFFFF; --ink:#1A1B3A; --muted:#62658A; --line:#DCDEEA;
+ --navy:#12128F; --navy-soft:#E6E7F7; --magenta:#D9266F; --magenta-soft:#FBE4EE; --teal:#0C7F72; --teal-soft:#DDF1EE; --amber:#B86E00;
+ --bar:#3A3CB8; --bar-neg:#D9266F; --grid:#E4E6F0;
+ color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+ --paper:#14153A; --surface:#1D1F4C; --ink:#EEEFFA; --muted:#A6A9CC; --line:#34376E;
+ --navy:#9FA2FF; --navy-soft:#26296A; --magenta:#FF6FA6; --magenta-soft:#4A1D3B; --teal:#4FD1BF; --teal-soft:#14423F; --amber:#F2B04A;
+ --bar:#8C8FFF; --bar-neg:#FF6FA6; --grid:#2C2F63; color-scheme:dark; } }
+:root[data-theme="dark"]{
+ --paper:#14153A; --surface:#1D1F4C; --ink:#EEEFFA; --muted:#A6A9CC; --line:#34376E;
+ --navy:#9FA2FF; --navy-soft:#26296A; --magenta:#FF6FA6; --magenta-soft:#4A1D3B; --teal:#4FD1BF; --teal-soft:#14423F; --amber:#F2B04A;
+ --bar:#8C8FFF; --bar-neg:#FF6FA6; --grid:#2C2F63; color-scheme:dark; }
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 "Source Sans 3","Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:Poppins,"Segoe UI",system-ui,sans-serif;line-height:1.2;margin:0}
+h1{font-size:1.65rem;font-weight:700;color:var(--navy)}
+h2{font-size:1.25rem;font-weight:600;margin-bottom:.35rem}
+h3{font-size:1rem;font-weight:600;margin-bottom:.4rem}
+p{margin:.25rem 0 .75rem;max-width:72ch}
+.wrap{max-width:1380px;margin:0 auto;padding:20px 20px 48px}
+@media (max-width:600px){.wrap{padding:14px 12px 40px}h1{font-size:1.35rem}section.card{padding:14px 12px}}
+header.top{display:flex;flex-wrap:wrap;gap:12px 32px;align-items:flex-end;justify-content:space-between;padding-bottom:14px;border-bottom:3px solid var(--navy);margin-bottom:20px}
+header.top p{color:var(--muted);margin:.35rem 0 0}
+.brand{font:600 .9rem Poppins,sans-serif;color:var(--magenta)}
+.grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:minmax(0,1fr)}}
+main,aside{min-width:0}
+aside{position:sticky;top:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;max-height:calc(100vh - 24px);overflow:auto}
+@media (max-width:980px){aside{position:static;max-height:none}}
+aside h3{margin-top:14px} aside h3:first-child{margin-top:0}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;cursor:pointer;color:var(--muted)}
+.drop.over{border-color:var(--navy);background:var(--navy-soft)}
+.drop strong{color:var(--ink)}
+button{font:600 .95rem "Source Sans 3",sans-serif;border-radius:7px;border:1px solid var(--navy);background:var(--surface);color:var(--navy);padding:.5rem .85rem;cursor:pointer}
+button.primary{background:var(--navy);color:#fff;width:100%;padding:.75rem;font-size:1.02rem}
+:root[data-theme="dark"] button.primary{color:#14153A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.primary{color:#14153A}}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,.drop:focus-visible{outline:3px solid var(--magenta);outline-offset:2px}
+.status{font-size:.9rem;margin-top:10px;padding:8px 10px;border-radius:7px;background:var(--navy-soft)}
+.status.ok{background:var(--teal-soft)} .status.bad{background:var(--magenta-soft)}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+th{font-weight:600;color:var(--muted);background:var(--paper)}
+th:first-child,td:first-child{text-align:left}
+.vhead,.vin{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:5px}
+.vhead{font-size:.78rem;color:var(--muted);margin:4px 0 2px;padding-left:2px}
+.v{padding:7px 0;border-bottom:1px solid var(--line)}
+.vname{display:block;font-size:.92rem;font-weight:600;margin-bottom:4px}
+.vin input,.vin select{width:100%;min-width:0}
+td.num,th.num{white-space:nowrap}
+input[type=number],select,input[type=text]{font:inherit;font-size:.88rem;padding:3px 5px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink)}
+label.row{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:6px 0;font-size:.9rem}
+label.row input,label.row select{max-width:140px}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:8px}
+.bar>div{height:100%;width:0;background:var(--magenta);transition:width .15s}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 18px 14px;margin-bottom:20px}
+.hero{border-top:6px solid var(--navy)}
+.lead{font-size:1.15rem;max-width:68ch}
+.lead b{font-family:Poppins,sans-serif}
+.neg{color:var(--magenta)} .pos{color:var(--teal)}
+.small{font-size:.85rem;color:var(--muted)}
+.tablewrap{overflow-x:auto}
+.mult{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.mult{grid-template-columns:1fr}}
+.mult figure{margin:0;border:1px solid var(--line);border-radius:8px;padding:10px}
+figure figcaption{font:600 .92rem Poppins,sans-serif;margin-bottom:4px}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:"Source Sans 3",sans-serif;fill:var(--muted);font-size:12px}
+.empty{color:var(--muted);padding:26px;text-align:center;border:1px dashed var(--line);border-radius:8px}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.8rem;font-weight:600}
+.chip.best{background:var(--teal-soft);color:var(--teal)} .chip.no{background:var(--magenta-soft);color:var(--magenta)}
+.stress input{width:70px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+td.best{background:var(--teal-soft);font-weight:700}
+
+.sgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+@media (max-width:1100px){.sgrid{grid-template-columns:minmax(0,1fr)}}
+.sgroup h3{display:flex;justify-content:space-between;align-items:baseline}
+.sl{margin:10px 0 14px}
+.sl .top{display:flex;justify-content:space-between;gap:8px;font-size:.92rem}
+.sl .val{font-weight:700;white-space:nowrap}
+.sl input[type=range]{width:100%;accent-color:var(--navy);margin:6px 0 0}
+.sl .ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted)}
+.gIng{border-top:4px solid var(--teal);padding-top:8px} .gEgr{border-top:4px solid var(--magenta);padding-top:8px} .gTas{border-top:4px solid var(--navy);padding-top:8px}
+.kebox{background:var(--navy-soft);border-radius:8px;padding:8px 10px;font-size:.9rem;margin-top:4px}
+.dpos{color:var(--teal);font-weight:600} .dneg{color:var(--magenta);font-weight:600}
+
+.verdict{display:flex;gap:14px;align-items:flex-start;padding:12px 14px;border-radius:8px;margin:6px 0 12px}
+.verdict .tag{font:700 1.05rem Poppins,sans-serif;padding:4px 12px;border-radius:999px;white-space:nowrap}
+.v-ok{background:var(--teal-soft)} .v-ok .tag{background:var(--teal);color:#fff}
+.v-mid{background:#FFF4D6} .v-mid .tag{background:var(--amber);color:#fff}
+.v-bad{background:var(--magenta-soft)} .v-bad .tag{background:var(--magenta);color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .v-mid{background:#4A3A12}}
+:root[data-theme="dark"] .v-mid{background:#4A3A12}
+.ins h3{margin-top:14px}
+.ins ol,.ins ul{margin:.3rem 0 .6rem 1.1rem;padding:0;max-width:80ch}
+.ins li{margin:.35rem 0}
+.dash td,.dash th{vertical-align:top}
+.dash td:first-child{min-width:170px}
+.dash td:last-child{min-width:300px}
+.dash{font-size:.88rem}
+.unit{display:block;font-size:.8rem;color:var(--muted);font-weight:400}
+details summary{cursor:pointer;font-weight:600;color:var(--navy);margin:8px 0}
+.readgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px;max-width:900px}
+@media (max-width:760px){.readgrid{grid-template-columns:1fr}}
+
+.toolbar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;box-shadow:0 6px 20px rgba(18,18,80,.14);max-width:min(440px,calc(100vw - 28px))}
+.tbtns{display:flex;gap:8px;align-items:flex-start}
+.toolbar button.primary{width:auto;padding:.5rem .9rem;font-size:.95rem}
+.saveinfo{font-size:.8rem;color:var(--muted);margin-top:5px;text-align:right}
+.saveinfo.dirty{color:var(--magenta);font-weight:600}
+.pdfwrap{position:relative}
+.pdfmenu{position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(18,18,80,.16);padding:6px;display:flex;flex-direction:column;gap:6px;min-width:290px}
+.pdfmenu[hidden]{display:none}
+.pdfmenu button{text-align:left;border:none;background:var(--navy-soft);color:var(--ink)}
+header.top{padding-right:min(460px,40vw)}
+@media (max-width:760px){.pdfmenu{top:auto;bottom:calc(100% + 4px);min-width:260px}.toolbar{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);right:10px;left:10px;max-width:none}.tbtns{justify-content:flex-end}header.top{padding-right:0}.wrap{padding-bottom:110px}}
+.pdfroot{--paper:#FFFFFF;--surface:#FFFFFF;--ink:#1A1B3A;--muted:#55587A;--line:#D5D8E6;--navy:#12128F;--navy-soft:#E6E7F7;--magenta:#D9266F;--magenta-soft:#FBE4EE;--teal:#0C7F72;--teal-soft:#DDF1EE;--amber:#B86E00;--bar:#3A3CB8;--bar-neg:#D9266F;--grid:#E4E6F0;
+ position:absolute;left:-10000px;top:0;width:1000px;background:#fff;color:#1A1B3A;font:400 14px/1.45 "Source Sans 3","Segoe UI",sans-serif;padding:0}
+.pdfroot .blk{padding:6px 24px;background:#fff}
+.pdfroot h1{font-size:22px;color:#12128F}.pdfroot h2{font-size:17px;margin:4px 0}.pdfroot h3{font-size:15px;margin:6px 0 4px}
+.pdfroot table{font-size:12px}.pdfroot .small,.pdfroot .unit{font-size:11px}
+.note{border-left:4px solid var(--navy);padding:6px 12px;background:var(--navy-soft);border-radius:0 6px 6px 0;margin:10px 0;font-size:.92rem}
+</style>
+</head>
+<body>
+<div class="toolbar" id="toolbar" role="region" aria-label="Guardar e imprimir">
+ <div class="tbtns"><button class="primary" id="btnSave" disabled>Guardar cambios</button>
+ <div class="pdfwrap"><button id="btnPdf" disabled aria-haspopup="true" aria-expanded="false">Descargar PDF ▾</button>
+  <div class="pdfmenu" id="pdfMenu" hidden><button data-mode="sim">Conclusiones con la simulación</button><button data-mode="nosim">Tablero de indicadores y conclusiones, sin simulación</button></div></div></div>
+ <div class="saveinfo" id="saveInfo" aria-live="polite">Sin cambios guardados</div>
+</div>
+<div class="wrap">
+<header class="top">
+ <div><div class="brand">Consultnet · OVOCOR · Fase 4</div><h1>Simulador Monte Carlo del proyecto de aumento de escala</h1>
+ <p>Simula precio, costos, inversión y tasas sobre el flujo de fondos del Excel, mide cómo se degradan los indicadores y calcula qué palanca restablece el equilibrio. Todos los importes y tasas están en dólares (USD).</p></div>
+</header>
+<div class="grid">
+<aside>
+ <h3>1. Datos del proyecto</h3>
+ <div class="drop" id="drop" tabindex="0" role="button" aria-label="Subir el Excel de la Fase 4"><strong>Subir el Excel de la Fase 4</strong><br><span class="small">Arrastrar o tocar para elegir el .xlsx guardado</span></div>
+ <input type="file" id="file" accept=".xlsx,.xlsm,.xls" hidden>
+ <div style="margin-top:8px"><button id="demo">Probar con datos de ejemplo (ficticios)</button></div>
+ <div id="loadStatus" class="status">Todavía no hay datos cargados.</div>
+ <h3>2. Variables a simular</h3>
+ <p class="small">Cambio sobre el caso base: mínimo, más probable y máximo. La tasa, en puntos porcentuales.</p>
+ <div class="vhead"><span>Distribución</span><span>Mín</span><span>Prob.</span><span>Máx</span></div><div id="varList"></div>
+ <label class="row">Precio del mix <select id="priceMode"><option value="comun">Un factor común</option><option value="producto">Cada producto por separado</option></select></label>
+ <label class="row">Correlación precio–huevo <input type="number" id="corr" step="0.1" min="-1" max="1" value="0.5"></label>
+ <label class="row">Iteraciones <input type="number" id="iter" step="1000" min="1000" max="200000" value="50000"></label>
+ <label class="row">Semilla <input type="number" id="seed" value="12345"></label>
+ <label class="row">Payback descontado objetivo (años) <input type="number" id="pbobj" step="0.5" min="0"></label>
+ <label class="row">La tasa también sube el préstamo <input type="checkbox" id="linkLoan" checked></label>
+ <button class="primary" id="run" disabled>Simular escenarios</button>
+ <div class="bar" aria-hidden="true"><div id="prog"></div></div>
+ <div class="small" id="runInfo"></div>
+</aside>
+<main>
+ <section class="card" id="secIns">
+  <h2>Resumen ejecutivo: indicadores y conclusión</h2>
+  <p class="small">Se actualiza solo con los datos del Excel, los deslizadores y, si se corrió, la simulación.</p>
+  <div id="insBox"><div class="empty">Cargá los datos para ver las conclusiones.</div></div>
+ </section>
+ <section class="card" id="secRead">
+  <h2>Cómo leer los números</h2>
+  <div id="readBox" class="small">Cargá el Excel para ver el horizonte, la moneda y los datos que se leyeron.</div>
+ </section>
+ <section class="card hero" id="secHero">
+  <h2>Distribución del VAN</h2>
+  <div id="heroText" class="lead">Subí el Excel (o usá los datos de ejemplo) y simulá para ver la distribución del valor del proyecto.</div>
+  <div id="heroChart"></div>
+ </section>
+
+
+ <section class="card" id="secSlide">
+  <h2>Sensibilidad con deslizadores</h2>
+  <p class="small">Mové ingresos, egresos y tasas y mirá cómo cambian los indicadores al instante. Todo en dólares: las tasas son tasas en USD (bono del Tesoro de EE.UU. + riesgo país Argentina + prima del proyecto).</p>
+  <div id="slideBox"><div class="empty">Cargá los datos para usar los deslizadores.</div></div>
+ </section>
+ <section class="card" id="secBE">
+  <h2>Punto mínimo y punto de equilibrio</h2>
+  <p class="small">Punto mínimo: volumen de productos que cubre los costos fijos operativos (EBITDA = 0). Punto de equilibrio: volumen con ingresos iguales a los costos totales (costos fijos operativos + amortizaciones + intereses). Se recalcula con los valores de los deslizadores.</p>
+  <label class="row" style="max-width:460px">Año de análisis <select id="beYear" style="max-width:none;min-width:260px"></select></label>
+  <div id="beBox"><div class="empty">Cargá los datos para calcular el punto de equilibrio.</div></div>
+ </section>
+ <section class="card" id="secStats">
+  <h2>Indicadores en los escenarios simulados</h2>
+  <p class="small">P5 a P95: el 90% de los escenarios cae en ese rango. “Prob. desfavorable” es la proporción de escenarios que cumplen la condición indicada debajo de cada indicador. Cada escenario es el proyecto completo: los mismos cambios se aplican a todos los años del horizonte.</p>
+  <div class="tablewrap" id="statsTable"><div class="empty">Sin simulación todavía.</div></div>
+  <div class="mult" id="mult" style="margin-top:14px"></div>
+ </section>
+ <section class="card" id="secSens">
+  <h2>Qué variables mueven el resultado</h2>
+  <p class="small">Tornado: VAN de toda la vida del proyecto (valor de hoy) con cada variable en su percentil 10 y 90, las demás en el caso base. Correlación de rangos: cuánto explica cada variable la dispersión del VAN en la simulación.</p>
+  <div class="two"><div id="tornado"><div class="empty">Cargá los datos para ver el tornado.</div></div><div class="tablewrap" id="sensTable"></div></div>
+ </section>
+ <section class="card" id="secBreak">
+  <h2>Puntos de quiebre</h2>
+  <p class="small">Cuánto puede moverse cada variable, sola, desde el caso base y en forma permanente (en todos los años del horizonte), antes de que el VAN de toda la vida del proyecto llegue a cero o el payback supere el objetivo.</p>
+  <div class="tablewrap" id="breakTable"><div class="empty">Cargá los datos para calcular los puntos de quiebre.</div></div>
+ </section>
+ <section class="card" id="secRestore">
+  <h2>Restablecer el equilibrio</h2>
+  <p class="small">Definí un escenario de deterioro (por defecto, el valor desfavorable P10/P90 de cada variable activa). La tabla muestra cuánto habría que mover cada palanca, sola, para volver al VAN del caso base, al payback objetivo o al VAN cero.</p>
+  <div class="tablewrap stress" id="stressInputs"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><button id="stressAdverse">Usar valores desfavorables P10/P90</button><button id="stressZero">Poner todo en cero</button><button id="stressCalc">Recalcular</button></div>
+  <div id="restoreOut"><div class="empty">Cargá los datos para analizar escenarios de deterioro.</div></div>
+ </section>
+ <p class="small">El simulador reproduce las fórmulas del modelo del Excel (flujo libre, impuestos con quebrantos, capital de trabajo, IVA, deuda bancaria y de proveedores, WACC). Al cargar el archivo compara su caso base con los indicadores del Excel y muestra la diferencia.</p>
+</main>
+</div>
+</div>
+<script>
+// ===== Motor del simulador (compartido por la página y las pruebas) =====
+const ENG = (function(){
+let T=16; const NPR=10;
+function num(v){ if(v===null||v===undefined||v==="") return 0; if(typeof v==="number") return isFinite(v)?v:0; const x=parseFloat(String(v).replace(",", ".")); return isFinite(x)?x:0; }
+function parseRows(rows){
+  const D={s:{},ser:{},vars:[],raw:{}};
+  // cantidad de años: la define el Excel (columnas de la serie OP)
+  let TT=0; for(const row of rows){ if(row&&row[0]==="OP"&&row[2]==="serie"){ for(let j=3;j<row.length;j++) if(typeof row[j]==="number") TT=j-2; } }
+  if(TT>0) T=TT;
+  for(const row of rows){
+    if(!row) continue; const k=row[0];
+    if(typeof k!=="string" || !/^[A-Z][A-Z0-9_]*$/.test(k)) continue;
+    if(k.startsWith("MCV_")){ D.vars.push({key:k,label:row[1],on:row[2]==="Sí",dist:row[3]||"Triangular",min:num(row[4]),mode:num(row[5]),max:num(row[6])}); continue; }
+    if(row[2]==="serie"){ const a=[]; for(let t=0;t<T;t++) a.push(num(row[3+t])); D.ser[k]=a; continue; }
+    D.raw[k]=row[2]; D.s[k]=(typeof row[2]==="number")?row[2]:(row[2]===null||row[2]===undefined||row[2]===""?null:row[2]);
+  }
+  const need=["N","WACC","KEN","SUPKD","OP","REV_1","FIX","FIXCAP","CAPEX","FCF_XL","VOLP","PEY"];
+  const miss=need.filter(k=>!(k in D.s)&&!(k in D.ser));
+  if(miss.length) throw new Error("La hoja no tiene los datos esperados ("+miss.join(", ")+"). Usá el Excel OVOCOR Fase 4 actualizado.");
+  for(const k of ["ONI_T","ONI_NT","ONE_T","ONE_NT"]) if(!D.ser[k]) D.ser[k]=new Array(T).fill(0);
+  D.products=[]; for(let i=1;i<=NPR;i++){ const rev=D.ser["REV_"+i]||new Array(T).fill(0); D.products.push({i,name:String(D.s["PNAME_"+i]||("Producto "+i)),price:num(D.s["PPRICE_"+i]),rev,active:rev.some(v=>Math.abs(v)>1e-9),qreg:num(D.s["QREG_"+i]),ireg:num(D.s["IREG_"+i]),prod:num(D.s["PTYPE_"+i])===1}); }
+  return D;
+}
+function pmt(r,n,pv){ if(n<=0) return 0; return r===0?pv/n:pv*r/(1-Math.pow(1+r,-n)); }
+function npv(r,f){ let s=0; for(let t=0;t<f.length;t++) s+=f[t]/Math.pow(1+r,t); return s; }
+function irr(f){
+  let neg=false,pos=false; for(const v of f){ if(v<-1e-9) neg=true; if(v>1e-9) pos=true; } if(!(neg&&pos)) return null;
+  let x=0.1;
+  for(let it=0;it<60;it++){ let v=0,d=0; for(let t=0;t<f.length;t++){ const p=Math.pow(1+x,-t); v+=f[t]*p; d+=-t*f[t]*p/(1+x); }
+    if(Math.abs(v)<1e-7) return x; if(d===0) break; const nx=x-v/d; if(!isFinite(nx)||nx<=-0.999) break; if(Math.abs(nx-x)<1e-12) return nx; x=nx; }
+  const grid=[-0.99,-0.9,-0.7,-0.5,-0.3,-0.15,0,0.05,0.1,0.2,0.35,0.5,0.75,1,1.5,2.5,4,7,10];
+  let prev=npv(grid[0],f);
+  for(let i=1;i<grid.length;i++){ const cur=npv(grid[i],f); if(prev*cur<=0){ let a=grid[i-1],b=grid[i],fa=prev; for(let k=0;k<100;k++){ const m=(a+b)/2, fm=npv(m,f); if(fa*fm<=0){b=m;} else {a=m;fa=fm;} } return (a+b)/2; } prev=cur; }
+  return null;
+}
+function mirr(f,fr,rr,N){ let p=0,n=0; for(let t=0;t<=N&&t<f.length;t++){ if(f[t]>0) p+=f[t]*Math.pow(1+rr,N-t); else if(f[t]<0) n+=f[t]/Math.pow(1+fr,t); } if(p<=0||n>=0) return null; return Math.pow(p/(-n),1/N)-1; }
+function payback(f){ let cum=0,prev=0; for(let t=0;t<f.length;t++){ prev=cum; cum+=f[t]; if(t===0&&cum>=0) return 0; if(t>0&&prev<0&&cum>=0&&f[t]!==0) return t-1+(-prev)/f[t]; } return null; }
+function taxes(ebt,S,n){ n=n||T; const out=new Array(n); let L=S.QUEBR; for(let t=0;t<n;t++){ if(S.TAXOK){ out[t]=S.TG*ebt[t]; } else { out[t]=S.TG*Math.max(0,ebt[t]-L); L=Math.max(0,L-ebt[t]); } } return out; }
+
+function evaluate(D,f,opt){
+  opt=opt||{}; const s=D.s, X=D.ser; const S={TG:num(s.TG),TAXOK:num(s.TAXOK)===1,QUEBR:num(s.QUEBR)};
+  const N=Math.round(num(s.N)); const linkLoan=opt.linkLoan!==false; const TF=T; const T_=Math.min(TF,N+1);
+  const fp=f.price, fv=f.vol, fh=f.huevo, fo=f.otros, ff=f.fijos, fc=f.capex, dr=f.dr;
+  const DWCA=new Array(T_).fill(0),FIXA=new Array(T_),CMA=new Array(T_),REV=new Array(T_),CH=new Array(T_),CE=new Array(T_),CV=new Array(T_),EBITDA=new Array(T_),EBT=new Array(T_),FCF=new Array(T_),WC=new Array(T_),MANT=new Array(T_),CAPEX=new Array(T_),RESID=new Array(T_);
+  let INV0=0;
+  for(let t=0;t<T_;t++){
+    let rev=0; for(let p=0;p<NPR;p++) rev+=D.products[p].rev[t]*fp[p]; rev*=fv; REV[t]=rev;
+    const ch=X.CHUEVO[t]*fh*fv, ce=X.CENV[t]*fo*fv, co=X.COTR[t]*fo*fv; CH[t]=ch; CE[t]=ce; CV[t]=ch+ce+co;
+    const fix=(X.FIX[t]-X.FIXCAP[t])*ff+X.FIXCAP[t]*ff*fc; FIXA[t]=fix; CMA[t]=rev-CV[t]-rev*num(s.COMRATE)-rev*num(s.TVRATE);
+    MANT[t]=(X.MANT[t]-X.FIXCAP[t])*ff+X.FIXCAP[t]*ff*fc;
+    const preop=X.PREOP[t]*fc;
+    EBITDA[t]=rev-CV[t]-rev*num(s.COMRATE)-rev*num(s.TVRATE)-fix+X.AHO[t]-preop-X.PERD[t]+X.ONI_T[t]-X.ONE_T[t]*ff;
+    EBT[t]=EBITDA[t]-(X.DEPDED||X.DEP)[t]*fc+X.RESG[t]*fc+X.DESPG[t];
+    CAPEX[t]=X.CAPEX[t]*fc; RESID[t]=X.RESID[t]*fc; INV0+=CAPEX[t]+preop;
+  }
+  const TAX=taxes(EBT,S,T_);
+  for(let t=0;t<T_;t++){ const op=X.OP[t]; WC[t]=op*(REV[t]*num(s.DCOB)/365+CH[t]*num(s.DMP)/365+CV[t]*num(s.DPT)/365+CE[t]*num(s.DINS)/365-CH[t]*num(s.DPH)/365-(CV[t]-CH[t])*num(s.DPO)/365+num(s.CAJA)); }
+  for(let t=0;t<T_;t++){
+    let dwc; if(t===0) dwc=-WC[0]+(N===0?WC[0]:0); else dwc=X.HZ[t]*(-(WC[t]-WC[t-1])+(t===N?WC[t]:0)); DWCA[t]=dwc;
+    FCF[t]=EBITDA[t]-TAX[t]-CAPEX[t]-X.IVAOUT[t]*fc+X.IVAREC[t]*fc+dwc+RESID[t]+X.DESPV[t]+X.EVIT[t]+X.ONI_NT[t]-X.ONE_NT[t]*ff;
+  }
+  // tasa de corte recalculada como en el Excel (la inversión cambia la proporción de deuda; la variación de tasa sube Ke y la tasa del préstamo)
+  const RT=f.rates||null;
+  const LOAN0=num(s.LOAN), LRb=(RT?RT.lr:num(s.LR))+(linkLoan?dr:0), LNb=num(s.LN), LGb=num(s.LG);
+  const DEBT=LOAN0+num(s.SUPDEBT);
+  const KD=DEBT>0?(LOAN0*(LRb+((LNb+LGb)>0?num(s.LCOM)/(LNb+LGb):0))+num(s.SUPKD))/DEBT:0;
+  const KDT=KD*(1-(S.TAXOK?S.TG:0));
+  const KEN=(RT?RT.rf+RT.rp/10000+RT.prima+num(s.MRATE)+num(s.NEWRATE):num(s.KEN))+dr;
+  const WD=num(s.WDOBJ)>0?num(s.WDOBJ):(INV0>0?Math.min(1,DEBT/INV0):0);
+  const WN=(1-WD)*KEN+WD*KDT;
+  const WU=(!RT&&num(s.WACCOVR)>0)?num(s.WACCOVR)+num(s.MRATE)+dr:WN;
+  const real=num(s.REALF)===1, inf=num(s.INFUSD);
+  const conv=x=>real?(1+x)/(1+inf)-1:x;
+  const r=conv(WU), ke=conv(KEN), reinv=num(s.REINVIN)>0?conv(num(s.REINVIN)):r;
+  const res={fcf:FCF};
+  res.van=npv(r,FCF); { let sg=0; for(let t=1;t<=N&&t<T_;t++){ if(FCF[t-1]*FCF[t]<0) sg++; } res.signs=sg; let c=0,best=-Infinity,bk=0; for(let t=0;t<=N&&t<T_;t++){ c+=FCF[t]/Math.pow(1+r,t); if(c>best){best=c;bk=t;} } res.dcmax=best; res.dcmaxYear=bk; } res.tir=irr(FCF); res.tirm=mirr(FCF,r,reinv,N);
+  res.pbs=INV0===0?null:payback(FCF);
+  const dfc=FCF.map((v,t)=>v/Math.pow(1+r,t)); res.pbd=INV0===0?null:payback(dfc);
+  let ni=0; for(let t=0;t<T_;t++) ni+=X.OP[t]*(EBT[t]-TAX[t]); res.roi=INV0>0?ni/N/INV0:null;
+  let pvcap=0,pvres=0,pvm=0; for(let t=0;t<T_;t++){ const df=1/Math.pow(1+r,t); pvcap+=CAPEX[t]*df; pvres+=RESID[t]*df; pvm+=MANT[t]*df; }
+  const frc=r===0?1/N:r/(1-Math.pow(1+r,-N)); res.bae=res.van*frc; res.cae=(pvcap-pvres+pvm)*frc; res.ir=pvcap>0?1+res.van/pvcap:null; res.ei=pvcap>0?res.van/pvcap:null; res.pvcap=pvcap;
+  let rev=0, eb=0; for(let t=0;t<T_;t++){ rev+=REV[t]; eb+=X.OP[t]*EBITDA[t]; } res.ebm=rev>0?eb/rev:null;
+  // inversionista
+  const LOAN=num(s.LOAN), LR=LRb, LN=Math.round(num(s.LN)), LG=Math.round(num(s.LG)), ALE=num(s.LSYS_ALEMAN)===1;
+  const LINT=new Array(T_).fill(0),LAM=new Array(T_).fill(0); let LBF=LOAN; const cuota=pmt(LR,LN,LOAN);
+  for(let t=1;t<T_;t++){ const LBI=LBF; LINT[t]=LBI*LR*X.HZ[t]; let am=0; if(t>N) am=0; else if(t===N) am=LBI; else if(LN>0&&t>LG&&t<=LG+LN) am=ALE?LOAN/LN:cuota-LINT[t]; LAM[t]=am; LBF=LBI-am; }
+  const LCOMr=LOAN*num(s.LCOM);
+  const IEBT=EBT.map((v,t)=>v-LINT[t]-(t===0?LCOMr:0)-X.SINT[t]); const ITAX=taxes(IEBT,S,T_);
+  const EQF=new Array(T_); let dmin=null,dminY=null; const DSA=[];
+  for(let t=0;t<T_;t++){
+    EQF[t]=FCF[t]+(t===0?LOAN*X.HZ[0]:0)-(t===0?LCOMr:0)-LINT[t]-LAM[t]+X.SINFL[t]-X.SPAY[t]+(TAX[t]-ITAX[t]);
+    const serv=LINT[t]+LAM[t]+X.SPAY[t]; if(X.OP[t]===1&&serv>0.005){ const d=(EBITDA[t]-ITAX[t])/serv; DSA.push({t,d,serv,avail:EBITDA[t]-ITAX[t]}); if(dmin===null||d<dmin){dmin=d;dminY=t;} }
+  }
+  let iq=0,qq=0,ia=0; for(let p=0;p<NPR;p++){ const P_=D.products[p]; ia+=P_.ireg*fp[p]*fv; if(P_.prod){ iq+=P_.ireg*fp[p]*fv; qq+=P_.qreg*fv; } } res.ireg=ia; res.pmix=qq>0?iq/qq:null;
+  // punto mínimo y punto de equilibrio por año
+  const VP=(X.VOLP||new Array(T_).fill(0)).map(v=>v*fv);
+  const be={vol:VP,cmu:[],cf:[],ct:[],qmin:[],qeq:[],rpk:[],rev:REV};
+  for(let t=0;t<T_;t++){ const cmu=VP[t]>0?CMA[t]/VP[t]:0; const cf=FIXA[t]-X.AHO[t]-X.ONI_T[t]+X.ONE_T[t]*ff; const ct=cf+(X.DEPDED||X.DEP)[t]*fc+LINT[t]+X.SINT[t];
+    be.cmu[t]=cmu; be.cf[t]=cf; be.ct[t]=ct; be.rpk[t]=VP[t]>0?REV[t]/VP[t]:0;
+    const ok=X.OP[t]===1&&cmu>0; be.qmin[t]=ok?Math.max(0,cf)/cmu:null; be.qeq[t]=ok?Math.max(0,ct)/cmu:null; }
+  res.be=be; const ry=Math.round(opt.refYear||num(s.PEY)||1);
+  res.refYear=ry; res.pmin=(be.qmin[ry]!==null&&VP[ry]>0)?be.qmin[ry]/VP[ry]:null; res.peq=(be.qeq[ry]!==null&&VP[ry]>0)?be.qeq[ry]/VP[ry]:null;
+  res.qmin=be.qmin[ry]; res.qeq=be.qeq[ry];
+  const pad=a=>{ const o=a.slice(); while(o.length<TF) o.push(0); return o; }; res.fcf=pad(FCF); res.eqf=pad(EQF); res.ke=ke;
+  res.lint=pad(LINT); res.lam=pad(LAM);
+  { const st={rev:[],cop:[],ebitda:[],dep:[],gain:[],ebit:[],tax:[],ni:[],wc:[],capex:[],iva:[],resid:[],otros:[],fcf:[],int:[],iebt:[],itax:[],ini:[],loan:[],sup:[],lam:[],sam:[],eqf:[]};
+    for(let t=0;t<T_;t++){ const dd=(X.DEPDED||X.DEP)[t]*fc, gn=X.RESG[t]*fc+X.DESPG[t];
+      st.rev.push(REV[t]); st.ebitda.push(EBITDA[t]); st.cop.push(REV[t]-EBITDA[t]); st.dep.push(dd); st.gain.push(gn); st.ebit.push(EBT[t]); st.tax.push(TAX[t]); st.ni.push(EBT[t]-TAX[t]);
+      st.wc.push(DWCA[t]); st.capex.push(CAPEX[t]); st.iva.push(-X.IVAOUT[t]*fc+X.IVAREC[t]*fc); st.resid.push(RESID[t]); st.otros.push(X.DESPV[t]+X.EVIT[t]+X.ONI_NT[t]-X.ONE_NT[t]*ff); st.fcf.push(FCF[t]);
+      const it=LINT[t]+X.SINT[t]+(t===0?LCOMr:0); st.int.push(it); st.iebt.push(IEBT[t]); st.itax.push(ITAX[t]); st.ini.push(IEBT[t]-ITAX[t]);
+      st.loan.push(t===0?LOAN*X.HZ[0]:0); st.sup.push(X.SINFL[t]); st.lam.push(LAM[t]); st.sam.push(X.SPAY[t]-X.SINT[t]); st.eqf.push(EQF[t]); }
+    res.st=st; }
+  { let tp=0,sp=0; for(let t=0;t<T_;t++){ const df=1/Math.pow(1+r,t); tp+=TAX[t]*df; sp+=S.TG*(X.DEPDED||X.DEP)[t]*fc*df; } res.taxpv=tp; res.shieldpv=S.TAXOK?sp:null; }
+  { let c=0,mn=0,my=0; for(let t=0;t<T_;t++){ c+=FCF[t]; if(c<mn-1e-9){mn=c;my=t;} } res.expo=mn; res.expoYear=my;
+    let sf=0; for(let t=0;t<=N&&t<T_;t++) sf+=FCF[t]; res.payout=INV0>0?(sf+INV0)/INV0:null;
+    let it=LCOMr; for(let t=0;t<T_;t++) it+=LINT[t]+X.SINT[t]; res.inttot=it;
+    let cm=0,dm=0; for(let t=1;t<T_;t++){ cm=Math.max(cm,LINT[t]+LAM[t]); dm=Math.max(dm,LINT[t]+LAM[t]+X.SPAY[t]); } res.cuotamax=cm; res.dsmax=dm;
+    const fy=Math.round(num(s.FREG))||N; res.ebmr=(fy<T_&&REV[fy]>0)?EBITDA[fy]/REV[fy]:null; } res.ken=KEN; res.lr=LR; res.vane=npv(ke,EQF); res.tire=irr(EQF); res.dscr=dmin; res.dscrYear=dminY; res.dscrAll=DSA; { const w=DSA.find(x=>x.t===dminY); res.dscrServ=w?w.serv:null; res.dscrAvail=w?w.avail:null; res.dscrGap=w?Math.max(0,w.serv-w.avail):null; res.dscrGap13=w?Math.max(0,1.3*w.serv-w.avail):null; res.dscrLow=DSA.filter(x=>x.d<1.3).map(x=>x.t); } res.inv0=INV0; res.r=r;
+  return res;
+}
+function baseFactors(){ return {price:new Array(NPR).fill(1),huevo:1,otros:1,fijos:1,capex:1,vol:1,dr:0}; }
+function checkBase(D,opt){
+  const b=evaluate(D,baseFactors(),opt); const s=D.s; const rows=[];
+  const cmp=(lab,a,x)=>{ if(x===undefined) return; const xv=(typeof x==="number")?x:null; let ok; if(a===null||xv===null) ok=(a===null&&xv===null); else ok=Math.abs(a-xv)<=Math.max(1e-6,1e-7*Math.abs(xv)); rows.push({lab,sim:a,xl:xv,ok}); };
+  cmp("VAN",b.van,s.VAN_XL); cmp("TIR",b.tir,s.TIR_XL); cmp("TIR modificada",b.tirm,s.TIRM_XL); cmp("Índice de rentabilidad",b.ir,s.IR_XL); cmp("Eficiencia de la inversión",b.ei,s.EI_XL); cmp("Payout",b.payout,s.PAYOUT_XL); cmp("Necesidad máxima de financiamiento",b.expo,s.EXPO_XL); cmp("Intereses totales",b.inttot,s.INTT_XL); cmp("Cuota anual máxima",b.cuotamax,s.CUOTAMAX_XL); cmp("Servicio de deuda máximo",b.dsmax,s.DSMAX_XL); cmp("Margen EBITDA de régimen",b.ebmr,s.EBMR_XL); cmp("Payback simple",b.pbs,s.PBS_XL); cmp("Payback descontado",b.pbd,s.PBD_XL);
+  cmp("ROI",b.roi,s.ROI_XL); cmp("Costo anual equivalente",b.cae,s.CAE_XL); cmp("VAN inversionista",b.vane,s.VANE_XL); cmp("TIR inversionista",b.tire,s.TIRE_XL); cmp("DSCR mínimo",b.dscr,s.DSCRM_XL); cmp("Año del DSCR mínimo",b.dscrYear,s.DSCRY_XL); cmp("Faltante para pagar la deuda",b.dscrGap,s.DSCRGAP1_XL); cmp("Punto mínimo (kg)",b.qmin,s.BEMIN_XL); cmp("Punto de equilibrio (kg)",b.qeq,s.BEEQ_XL); cmp("Punto mínimo (% plan)",b.pmin,s.BEMINP_XL); cmp("Punto de equilibrio (% plan)",b.peq,s.BEEQP_XL);
+  let mx=0; for(let t=0;t<T;t++) mx=Math.max(mx,Math.abs(b.fcf[t]-D.ser.FCF_XL[t]),Math.abs(b.eqf[t]-D.ser.EQF_XL[t]),D.ser.LINT?Math.abs(b.lint[t]-D.ser.LINT[t]):0,D.ser.LAM?Math.abs(b.lam[t]-D.ser.LAM[t]):0);
+  return {rows,maxFlowDiff:mx,ok:rows.every(r=>r.ok)&&mx<0.01,base:b};
+}
+return {parseRows,evaluate,checkBase,baseFactors,irr,npv,payback,num,get T(){return T;}};
+})();
+if(typeof module!=="undefined") module.exports=ENG;
+
+// ===== Monte Carlo, sensibilidad, puntos de quiebre y restablecimiento =====
+const MC = (function(E){
+const LEVERS=[
+ {key:"PRECIO",name:"Precio de venta (mix)",kind:"mult"},
+ {key:"HUEVO",name:"Costo del huevo",kind:"mult"},
+ {key:"OTROS",name:"Otros costos variables",kind:"mult"},
+ {key:"FIJOS",name:"Costos fijos",kind:"mult"},
+ {key:"CAPEX",name:"Inversión (CAPEX)",kind:"mult"},
+ {key:"VOL",name:"Volumen vendido",kind:"mult"},
+ {key:"TASA",name:"Tasa de corte y del préstamo",kind:"add"}];
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function gauss(rng){ let u=0,v=0; while(u===0)u=rng(); while(v===0)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function Phi(z){ const t=1/(1+0.2316419*Math.abs(z)); const d=0.3989422804014327*Math.exp(-z*z/2); let p=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429)))); return z>0?1-p:p; }
+function invPhi(p){ // Acklam
+ const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00],b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01],c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00],d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+ const pl=0.02425; let q,r;
+ if(p<pl){ q=Math.sqrt(-2*Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+ if(p>1-pl){ q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+ q=p-0.5; r=q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1); }
+function inv(v,u){ const a=v.min,c=v.mode,b=v.max;
+ if(v.dist==="Uniforme") return a+u*(b-a);
+ if(v.dist==="Normal"){ const sd=(b-a)/3.2897; return c+sd*invPhi(Math.min(1-1e-12,Math.max(1e-12,u))); }
+ if(b<=a) return a; const Fc=(c-a)/(b-a); return u<Fc? a+Math.sqrt(u*(b-a)*(c-a)) : b-Math.sqrt((1-u)*(b-a)*(b-c)); }
+function factorsFrom(ch,np){ // ch: {PRECIO|PRECIO_p, HUEVO,...} cambios
+ const f=E.baseFactors();
+ for(let p=0;p<f.price.length;p++){ const c=(ch["PRECIO_"+p]!==undefined)?ch["PRECIO_"+p]:(ch.PRECIO||0); f.price[p]=Math.max(0.01,1+c); }
+ f.huevo=Math.max(0,1+(ch.HUEVO||0)); f.otros=Math.max(0,1+(ch.OTROS||0)); f.fijos=Math.max(0,1+(ch.FIJOS||0)); f.capex=Math.max(0.01,1+(ch.CAPEX||0)); f.vol=Math.max(0.01,1+(ch.VOL||0)); f.dr=ch.TASA||0; return f; }
+const OUT=["van","tir","tirm","pbs","pbd","roi","cae","bae","ir","vane","tire","dscr","r","pmin","peq","ei","payout"];
+function run(D,cfg,onChunk,done){
+ const N=cfg.iter, rng=mulberry32(cfg.seed>>>0), on=cfg.vars, corr=Math.max(-0.999,Math.min(0.999,cfg.corr||0));
+ const res={n:N,out:{},inp:{}}; for(const k of OUT) res.out[k]=new Float64Array(N);
+ const keys=LEVERS.map(l=>l.key).filter(k=>on[k]&&on[k].on);
+ for(const k of keys) res.inp[k]=new Float64Array(N);
+ const act=D.products.map(p=>p.active); const wrev=D.products.map(p=>p.rev.reduce((a,b)=>a+b,0)); const W=wrev.reduce((a,b)=>a+b,0)||1;
+ let i=0; const opt={linkLoan:cfg.linkLoan,refYear:cfg.refYear};
+ function step(){
+  const end=Math.min(N,i+(cfg.chunk||2500));
+  for(;i<end;i++){
+   const ch={}; const zh=gauss(rng);
+   for(const k of keys){
+    if(k==="PRECIO"){
+     if(cfg.priceMode==="producto"){ let avg=0; for(let p=0;p<D.products.length;p++){ const z=corr*zh+Math.sqrt(1-corr*corr)*gauss(rng); const c=inv(on.PRECIO,Phi(z)); ch["PRECIO_"+p]=c; avg+=c*wrev[p]/W; } res.inp.PRECIO[i]=avg; }
+     else { const z=corr*zh+Math.sqrt(1-corr*corr)*gauss(rng); const c=inv(on.PRECIO,Phi(z)); ch.PRECIO=c; res.inp.PRECIO[i]=c; }
+    } else { const z=(k==="HUEVO")?zh:gauss(rng); const c=inv(on[k],Phi(z)); ch[k]=c; res.inp[k][i]=c; }
+   }
+   const r=E.evaluate(D,factorsFrom(ch),opt);
+   for(const k of OUT){ const v=r[k]; res.out[k][i]=(v===null||v===undefined||!isFinite(v))?NaN:v; }
+  }
+  if(onChunk) onChunk(i/N);
+  if(i<N){ if(typeof setTimeout!=="undefined"&&!cfg.sync) setTimeout(step,0); else step(); } else if(done) done(res);
+ }
+ step(); return res;
+}
+function sorted(a){ const b=[]; for(const v of a) if(!isNaN(v)) b.push(v); b.sort((x,y)=>x-y); return b; }
+function pct(s,p){ if(!s.length) return NaN; const x=(s.length-1)*p, lo=Math.floor(x), hi=Math.ceil(x); return s[lo]+(s[hi]-s[lo])*(x-lo); }
+function stats(a){ const s=sorted(a); const n=s.length; let m=0; for(const v of s) m+=v; m/=n||1; let sd=0; for(const v of s) sd+=(v-m)*(v-m); sd=Math.sqrt(sd/Math.max(1,n-1));
+ return {n,nan:a.length-n,mean:m,sd,p5:pct(s,.05),p10:pct(s,.10),p50:pct(s,.5),p90:pct(s,.9),p95:pct(s,.95),min:s[0],max:s[n-1],sorted:s}; }
+function ranks(a){ const idx=Array.from(a.keys()).sort((i,j)=>a[i]-a[j]); const r=new Float64Array(a.length); for(let k=0;k<idx.length;k++) r[idx[k]]=k; return r; }
+function spearman(x,y){ const X=[],Y=[]; for(let i=0;i<x.length;i++) if(!isNaN(x[i])&&!isNaN(y[i])){X.push(x[i]);Y.push(y[i]);} const n=X.length; if(n<3) return NaN;
+ const rx=ranks(X), ry=ranks(Y); let mx=0,my=0; for(let i=0;i<n;i++){mx+=rx[i];my+=ry[i];} mx/=n; my/=n; let sxy=0,sxx=0,syy=0; for(let i=0;i<n;i++){const a=rx[i]-mx,b=ry[i]-my; sxy+=a*b; sxx+=a*a; syy+=b*b;} return sxx&&syy?sxy/Math.sqrt(sxx*syy):NaN; }
+function applyLever(f0,key,x){ const f=JSON.parse(JSON.stringify(f0));
+ if(key==="PRECIO") f.price=f.price.map(v=>v*x); else if(key==="HUEVO") f.huevo*=x; else if(key==="OTROS") f.otros*=x; else if(key==="FIJOS") f.fijos*=x; else if(key==="CAPEX") f.capex*=x; else if(key==="VOL") f.vol*=x; else if(key==="TASA") f.dr+=x; return f; }
+const RANGE={PRECIO:[0.2,4],HUEVO:[0,4],OTROS:[0,4],FIJOS:[0,4],CAPEX:[0.02,4],VOL:[0.1,4],TASA:[-0.3,1.5]};
+function metricOf(res,m){ const v=res[m]; if(m==="pbs"||m==="pbd") return (v===null||!isFinite(v))?99:v; return (v===null||!isFinite(v))?NaN:v; }
+function solve(D,f0,key,m,target,opt){
+ const [lo,hi]=RANGE[key]; const g=x=>metricOf(E.evaluate(D,applyLever(f0,key,x),opt),m)-target;
+ const neutral=key==="TASA"?0:1; const g0=g(neutral); if(Math.abs(g0)<1e-9) return {x:neutral,ok:true};
+ // buscar el tramo con cambio de signo más cercano al valor neutro, hacia ambos lados
+ const steps=60; let best=null;
+ for(const dir of [1,-1]){ const end=dir>0?hi:lo; let xa=neutral, ga=g0;
+  for(let k=1;k<=steps;k++){ const xb=neutral+(end-neutral)*k/steps; const gb=g(xb);
+   if(isFinite(ga)&&isFinite(gb)&&ga*gb<=0){ let a=xa,b=xb,fa=ga; for(let it=0;it<70;it++){ const mm=(a+b)/2, fm=g(mm); if(fa*fm<=0) b=mm; else {a=mm;fa=fm;} } const x=(a+b)/2; if(!best||Math.abs(x-neutral)<Math.abs(best-neutral)) best=x; break; }
+   xa=xb; ga=gb; } }
+ return best===null?{ok:false}:{x:best,ok:true};
+}
+return {LEVERS,run,stats,spearman,solve,applyLever,inv,factorsFrom,pct,sorted,OUT,metricOf};
+})(typeof ENG!=="undefined"?ENG:require("./engine.js"));
+if(typeof module!=="undefined") module.exports=MC;
+
+const DEMO=[["MC_ITER","Cantidad de iteraciones",50000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MC_CORR","Correlación entre precio de venta y precio del huevo (−1 a 1)",0.5,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MC_PBOBJ","Payback descontado objetivo de la Empresa (años; vacío = el máximo K9 o el del caso base)",5,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MC_LINKLOAN","¿La variación de tasa también se aplica al préstamo bancario?","Sí",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MCV_PRECIO","Precio de venta (mix de productos)","Sí","Triangular",-0.15,0,0.1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MCV_HUEVO","Costo del huevo","Sí","Triangular",-0.1,0,0.25,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MCV_OTROS","Otros costos variables (envases, energía, agua, CIP, fletes)","Sí","Triangular",-0.05,0,0.15,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MCV_FIJOS","Costos fijos","Sí","Triangular",-0.05,0,0.15,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MCV_CAPEX","Inversión (CAPEX)","Sí","Triangular",-0.05,0,0.2,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MCV_VOL","Volumen vendido","No","Triangular",-0.2,0,0.05,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MCV_TASA","Tasa de corte y tasa del préstamo (puntos porcentuales)","Sí","Triangular",-0.01,0,0.03,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["N","Horizonte (años)",10,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["SCEN","Escenario activo en MOD_Inputs","Base",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["AUDIT","Estado de la auditoría","OK",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["TG","Alícuota de Ganancias",0.35,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["TAXOK","La Empresa absorbe pérdidas (1 = sí)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QUEBR","Quebrantos iniciales (USD)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["COMRATE","Comisiones + incobrables + derechos de exportación (% ventas)",0.026,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["TVRATE","Impuestos sobre ventas (% ventas; IIBB y municipal solo mercado interno)",0.022,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DCOB","Días de capital de trabajo (DCOB)",45,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DMP","Días de capital de trabajo (DMP)",7,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DPT","Días de capital de trabajo (DPT)",10,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DINS","Días de capital de trabajo (DINS)",30,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DPH","Días de capital de trabajo (DPH)",15,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DPO","Días de capital de trabajo (DPO)",30,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["CAJA","Caja mínima (USD)",20000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["LOAN","Préstamo bancario (USD)",500000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["LR","Tasa del préstamo",0.09,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["LN","Plazo de amortización (años)",5,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["LG","Gracia (años)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["LSYS_ALEMAN","Sistema alemán (1 = sí)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["LCOM","Comisión del préstamo",0.01,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["WACC","Tasa de corte aplicada",0.10933484,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["KE","Tasa de los socios aplicada",0.153,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["REINV","Tasa de reinversión aplicada",0.08,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["REINV_IS_WACC","Reinversión = tasa de corte (1 = sí)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["KEN","Costo del capital propio nominal (incluye ajuste de escenario)",0.153,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["WDOBJ","Proporción de deuda objetivo (K6)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["WACCOVR","Tasa de corte manual",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["MRATE","Ajuste de tasa del escenario",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["REALF","Flujos en USD constantes (1 = sí)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["INFUSD","Inflación USD",0.025,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["REINVIN","Tasa de reinversión cargada",0.08,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["SUPKD","Suma de saldos de proveedores × tasa implícita anual",23292.657822,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["SUPDEBT","Saldos financiados por proveedores",300000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["RF","Tasa libre de riesgo (K1)",0.043,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["RP","Riesgo país en puntos básicos (K2)",700,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PRIMA","Prima de riesgo del proyecto (K3)",0.03,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["KEOVR","Rentabilidad exigida manual (K4)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["NEWRATE","Tasa adicional por variables nuevas",0.01,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["AJINF_NO","Amortizaciones sin actualizar (1 = sí)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DEVA","Devaluación anual esperada",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PBMAX","Payback máximo (K9)",5,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["ROIMIN","ROI mínimo (K10)",0.15,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["VAN_XL","VAN según el Excel (control)",1231890.30177942,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["TIR_XL","TIR según el Excel (control)",0.20363605,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["TIRM_XL","TIR modificada según el Excel (control)",0.14903524,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PBS_XL","Payback simple según el Excel (control)",4.72889157,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PBD_XL","Payback descontado según el Excel (control)",6.64277576,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["ROI_XL","ROI según el Excel (control)",0.25074351,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["CAE_XL","Costo anual equivalente según el Excel (control)",329622.53634302,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["BAE_XL","Beneficio anual equivalente según el Excel (control)",208593.65690745,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IR_XL","Índice de rentabilidad según el Excel (control)",1.71854014,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["EI_XL","Eficiencia de la inversión según el Excel (control)",0.71854014,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PAYOUT_XL","Payout según el Excel (control)",3.45797456,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["EXPO_XL","Necesidad máxima de financiamiento según el Excel (control)",-2154479.77601863,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["INTT_XL","Intereses totales según el Excel (control)",216731.14239186,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["CUOTAMAX_XL","Cuota anual máxima según el Excel (control)",128546.22847837,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DSMAX_XL","Servicio de deuda máximo según el Excel (control)",290546.22847837,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["EBMR_XL","Margen EBITDA de régimen según el Excel (control)",0.17156054,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["VANE_XL","VAN inversionista según el Excel (control)",736889.67330496,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["TIRE_XL","TIR inversionista según el Excel (control)",0.23713791,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DSCRM_XL","DSCR mínimo según el Excel (control)",0.89449024,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DSCRY_XL","Año del DSCR mínimo según el Excel (control)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DSCRGAP1_XL","Faltante deuda según el Excel (control)",21840.51953067,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DSCRN_XL","Años DSCR<1,3 según el Excel (control)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DSCRF_XL","Primer año DSCR<1,3 según el Excel (control)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["DSCRL_XL","Último año DSCR<1,3 según el Excel (control)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_1","Producto 1: nombre","Huevo líquido entero",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_1","Producto 1: precio USD/kg",2.2,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_1","Producto 1: volumen neto de régimen (kg/año)",1560000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_1","Producto 1: ingreso de régimen (USD/año)",3363360,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_1","Producto 1: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_2","Producto 2: nombre","Yema líquida",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_2","Producto 2: precio USD/kg",3.5,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_2","Producto 2: volumen neto de régimen (kg/año)",120000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_2","Producto 2: ingreso de régimen (USD/año)",411600,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_2","Producto 2: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_3","Producto 3: nombre","Clara líquida",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_3","Producto 3: precio USD/kg",1.4,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_3","Producto 3: volumen neto de régimen (kg/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_3","Producto 3: ingreso de régimen (USD/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_3","Producto 3: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_4","Producto 4: nombre","Huevo en polvo",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_4","Producto 4: precio USD/kg",9,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_4","Producto 4: volumen neto de régimen (kg/año)",180000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_4","Producto 4: ingreso de régimen (USD/año)",1587600,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_4","Producto 4: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_5","Producto 5: nombre","Subproducto: cáscara",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_5","Producto 5: precio USD/kg",0.03,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_5","Producto 5: volumen neto de régimen (kg/año)",240000,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_5","Producto 5: ingreso de régimen (USD/año)",7056,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_5","Producto 5: es producto (1) o subproducto (0)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_6","Producto 6: nombre","Producto 6 (sin cargar)",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_6","Producto 6: precio USD/kg",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_6","Producto 6: volumen neto de régimen (kg/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_6","Producto 6: ingreso de régimen (USD/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_6","Producto 6: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_7","Producto 7: nombre","Producto 7 (sin cargar)",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_7","Producto 7: precio USD/kg",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_7","Producto 7: volumen neto de régimen (kg/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_7","Producto 7: ingreso de régimen (USD/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_7","Producto 7: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_8","Producto 8: nombre","Producto 8 (sin cargar)",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_8","Producto 8: precio USD/kg",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_8","Producto 8: volumen neto de régimen (kg/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_8","Producto 8: ingreso de régimen (USD/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_8","Producto 8: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_9","Producto 9: nombre","Producto 9 (sin cargar)",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_9","Producto 9: precio USD/kg",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_9","Producto 9: volumen neto de régimen (kg/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_9","Producto 9: ingreso de régimen (USD/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_9","Producto 9: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PNAME_10","Producto 10: nombre","Producto 10 (sin cargar)",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PPRICE_10","Producto 10: precio USD/kg",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["QREG_10","Producto 10: volumen neto de régimen (kg/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["IREG_10","Producto 10: ingreso de régimen (USD/año)",0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PTYPE_10","Producto 10: es producto (1) o subproducto (0)",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["OP","Año operativo","serie",0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["HZ","Año en horizonte","serie",1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_1","Ingreso producto 1","serie",0,1681680,2744501.76,3499239.744,3569224.53888,3640609.0296576,3713421.21025075,3787689.63445577,3863443.42714488,3940712.29568778,4019526.54160154,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_2","Ingreso producto 2","serie",0,246960,356857.2,428228.64,436793.2128,445529.077056,454439.65859712,463528.45176906,472799.02080444,482255.00122053,491900.10124494,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_3","Ingreso producto 3","serie",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_4","Ingreso producto 4","serie",0,476280,971611.2,1486565.136,1684773.8208,1718469.297216,1752838.68316032,1787895.45682353,1823653.36596,1860126.4332792,1897328.96194478,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_5","Ingreso producto 5","serie",0,4233.6,6117.552,7341.0624,7487.883648,7637.64132096,7790.39414738,7946.20203033,8105.12607093,8267.22859235,8432.5731642,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_6","Ingreso producto 6","serie",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_7","Ingreso producto 7","serie",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_8","Ingreso producto 8","serie",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_9","Ingreso producto 9","serie",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["REV_10","Ingreso producto 10","serie",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["CHUEVO","Costo del huevo","serie",0,1500000,2516087.37244898,3328765.94387755,3502641.70121173,3590207.74374203,3679962.93733558,3771962.01076897,3866261.06103819,3962917.58756414,4061990.52725325,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["CENV","Envases e insumos","serie",0,132000,220416,289342.125,302390.8875,309950.6596875,317699.42617969,325641.91183418,333782.95963003,342127.53362079,350680.7219613,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["COTR","Otros variables","serie",0,137129.4,232018.59,307853.086875,323603.47903125,331693.56600703,339985.90515721,348485.55278614,357197.69160579,366127.63389594,375280.82474333,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["FIX","Costos fijos","serie",0,363750,372843.75,382164.84375,391718.96484375,401511.93896484,411549.73743897,421838.48087494,432384.44289681,443194.05396923,454273.90531846,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["FIXCAP","Fijos proporcionales al CAPEX","serie",0,36750,37668.75,38610.46875,39575.73046875,40565.12373047,41579.25182373,42618.73311932,43684.20144731,44776.30648349,45895.71414558,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["MANT","Mantenimiento y seguros","serie",0,44750,45868.75,47015.46875,48190.85546875,49395.62685547,50630.51752686,51896.28046503,53193.68747665,54523.52966357,55886.61790516,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["AHO","Ahorros","serie",0,10000,10250,10506.25,10768.90625,11038.12890625,11314.08212891,11596.93418213,11886.85753668,12184.0289751,12488.62969948,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["PREOP","Gastos preoperativos","serie",20000,5000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["PERD","Contribución perdida","serie",30000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["DEP","Amortizaciones","serie",0,158814,165814,165814,165814,165814,147814,159814,159814,159814,159814,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["DEPDED","Amortización deducible","serie",0,158814,165814,165814,165814,165814,147814,159814,159814,159814,159814,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["RESG","Resultado por valor residual","serie",0,0,0,0,0,0,0,0,0,0,23000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["DESPG","Resultado venta desplazados","serie",15000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["CAPEX","Inversión en activos","serie",1619140,70000,0,0,0,0,60000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["IVAOUT","IVA pagado","serie",270146.7,7350,0,0,0,0,6300,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["IVAREC","IVA recuperado","serie",0,0,270146.7,7350,0,0,0,0,6300,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["RESID","Valor residual","serie",0,0,0,0,0,0,0,0,0,0,163000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["DESPV","Venta de desplazados","serie",20000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["EVIT","Inversión evitada","serie",0,0,0,0,50000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["SINFL","Financiación proveedores","serie",300000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["LINT","Intereses bancarios","serie",0,45000,45000,37480.83943695,29284.95442322,20351.43975825,10613.90877344,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["LAM","Amortización de capital bancario","serie",0,0,83546.22847837,91065.38904143,99261.27405515,108194.78872012,117932.31970493,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["ONI_T","Otros ingresos gravados","serie",0,0,60000,61200,62424,63672.48,64945.9296,66244.848192,67569.74515584,68921.14005896,70299.56286014,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["ONI_NT","Otros ingresos no gravados","serie",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["ONE_T","Otros egresos deducibles","serie",0,0,0,30000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["ONE_NT","Otros egresos no deducibles","serie",0,12000,12000,12000,12000,12000,12000,12000,12000,12000,12000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["SPAY","Cuotas a proveedores","serie",0,162000,162000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["SINT","Intereses proveedores","serie",0,17605.55082665,6394.44917335,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["VOLP","Volumen planificado de productos (kg)","serie",0,906000,1458000,1842000,1860000,1860000,1860000,1860000,1860000,1860000,1860000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["FREG","Primer año de régimen",4,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["SIGNS","Cambios de signo del flujo libre",1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["PEY","Año de referencia del punto de equilibrio",4,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["BEMIN_XL","BEMIN según el Excel (control)",457099.44916203,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["BEEQ_XL","BEEQ según el Excel (control)",737075.36382552,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["BEMINP_XL","BEMINP según el Excel (control)",0.24575239,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["BEEQP_XL","BEEQP según el Excel (control)",0.39627708,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],["FCF_XL","Flujo libre según el Excel (control)","serie",-1907036.7,-247443.07601863,505423.02477898,467285.12667724,696888.67926655,665233.29870472,589993.48970275,657425.29009634,660210.74221279,649931.29447943,1622879.81049135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["EQF_XL","Flujo del inversionista según el Excel (control)","serie",-1110286.7,-432531.1332293,232864.85351127,351857.1920018,578592.1848363,543810.07414174,465162.12929508,657425.29009634,660210.74221279,649931.29447943,1622879.81049135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]];
+const $=s=>document.querySelector(s);
+const fmtN=new Intl.NumberFormat("es-AR",{maximumFractionDigits:0});
+const fmt1=new Intl.NumberFormat("es-AR",{maximumFractionDigits:1,minimumFractionDigits:1});
+const fmt2=new Intl.NumberFormat("es-AR",{maximumFractionDigits:2,minimumFractionDigits:2});
+const usd=v=>(v===null||v===undefined||!isFinite(v))?"n/d":"US$ "+fmtN.format(Math.abs(v)<0.5?0:v);
+const usdc=v=>{ if(!isFinite(v)) return "n/d"; const a=Math.abs(v); if(a>=1e6) return "US$ "+fmt2.format(v/1e6)+" M"; if(a>=1e3) return "US$ "+fmtN.format(v/1e3)+" k"; return "US$ "+fmtN.format(v); };
+const pc=v=>(v===null||v===undefined||!isFinite(v))?"n/d":fmt1.format(v*100)+"%";
+const pp=v=>(v===null||v===undefined||!isFinite(v))?"n/d":(v>0?"+":"")+fmt2.format(v*100)+" pp";
+const yrs=v=>(v===null||v===undefined||!isFinite(v)||v>=99)?"no recupera":fmt1.format(v)+" años";
+const x2=v=>(v===null||v===undefined||!isFinite(v))?"n/d":fmt2.format(v);
+const chg=v=>(v===null||v===undefined||!isFinite(v))?"n/d":(v>0?"+":"")+fmt1.format(v*100)+"%";
+let D=null, RES=null, OPT={linkLoan:true};
+const LV=MC.LEVERS;
+
+function NH(){ return D?Math.round(ENG.num(D.s.N)):0; }
+function MON(){ return D&&ENG.num(D.s.REALF)===1?"USD constantes":"USD corrientes"; }
+function UNIT(k){ const N=NH(), m=MON(); return ({
+ van:`${m} a valor de hoy (año 0); suma de los ${N} años`, tir:`% anual, sobre los ${N} años`, tirm:`% anual, sobre los ${N} años`, r:"% anual en USD",
+ pbs:"años contados desde la inversión (año 0)", pbd:"años desde el año 0, con flujos descontados", roi:`% anual, promedio de los ${N} años`,
+ cae:`${m} por año, durante ${N} años`, payout:"veces que el flujo del horizonte recupera la inversión, sin descontar", ei:"VAN / VA de la inversión = IR − 1 (%)", bae:`${m} por año, durante ${N} años`, ir:"veces lo invertido, a valor de hoy",
+ vane:`${m} a valor de hoy, después de la deuda`, tire:"% anual, flujo de los socios", dscr:"veces el servicio de deuda, en el año más ajustado",
+ pmin:"% del volumen planificado del año de análisis", peq:"% del volumen planificado del año de análisis",
+ pmix:"USD por kg, en régimen, a precios del año 1", ireg:"USD por año, en régimen, a precios del año 1"})[k]||""; }
+const IND=[
+ {k:"van",lab:"VAN",f:usdc,bad:(v,o)=>v<0,crit:"VAN < 0"},
+ {k:"tir",lab:"TIR",f:pc,bad:(v,o,i)=>v<RES.out.r[i],crit:"TIR < tasa de corte",nanBad:true},
+ {k:"tirm",lab:"TIR modificada",f:pc,bad:(v,o,i)=>v<RES.out.r[i],crit:"TIRM < tasa de corte",nanBad:true},
+  {k:"pbd",lab:"Payback dinámico (descontado)",f:yrs,bad:(v,o)=>o.pb>0&&v>o.pb,crit:"Payback dinámico > objetivo",nanBad:true,nanLab:"no recupera"},
+ {k:"roi",lab:"ROI",f:pc,bad:(v,o)=>o.roimin>0&&v<o.roimin,crit:"ROI < mínimo (K10)"},
+ {k:"cae",lab:"Costo anual equivalente",f:usdc,bad:(v,o)=>v>o.base.cae*1.1,crit:"CAE > base + 10%"},
+ {k:"ei",lab:"Eficiencia de la inversión (EI)",f:pc,bad:(v)=>v<0,crit:"EI < 0%"},
+ {k:"payout",lab:"Payout",f:v=>isFinite(v)?x2(v)+" veces":"n/d",bad:(v)=>v<1,crit:"Payout < 1"},
+ {k:"bae",lab:"Beneficio anual equivalente",f:usdc,bad:(v)=>v<0,crit:"BAE < 0"},
+ {k:"ir",lab:"Índice de rentabilidad",f:x2,bad:(v)=>v<1,crit:"IR < 1"},
+ {k:"vane",lab:"VAN del inversionista",f:usdc,bad:(v)=>v<0,crit:"VAN inversionista < 0"},
+ {k:"tire",lab:"TIR del inversionista",f:pc,bad:(v,o)=>v<o.base.ke,crit:"TIR inv. < tasa de los socios",nanBad:true},
+ {k:"dscr",lab:"DSCR mínimo",f:x2,bad:(v)=>v<1.3,crit:"DSCR < 1,3"},
+ {k:"pmin",lab:"Punto mínimo / volumen planificado",f:pc,bad:(v)=>v>1,crit:"Punto mínimo > volumen (año de análisis)",nanBad:true},
+ {k:"peq",lab:"Punto de equilibrio / volumen planificado",f:pc,bad:(v)=>v>1,crit:"Equilibrio > volumen (año de análisis)",nanBad:true}];
+function varRows(){ const box=$("#varList"); box.innerHTML="";
+ const byKey={}; for(const v of D.vars) byKey[v.key.replace("MCV_","")]=v;
+ for(const L of LV){ const v=byKey[L.key]||{on:false,dist:"Triangular",min:0,mode:0,max:0}; const d=document.createElement("div"); d.className="v"; d.dataset.k=L.key;
+  const u=L.key==="TASA"?"pp":"%";
+  d.innerHTML=`<label class="vname"><input type="checkbox" ${v.on?"checked":""}> ${L.name} <span class="small">(${u})</span></label>
+  <div class="vin"><select aria-label="Distribución de ${L.name}"><option ${v.dist==="Triangular"?"selected":""}>Triangular</option><option ${v.dist==="Uniforme"?"selected":""}>Uniforme</option><option ${v.dist==="Normal"?"selected":""}>Normal</option></select>
+  <input type="number" step="1" value="${+(v.min*100).toFixed(2)}" aria-label="Mínimo de ${L.name}"><input type="number" step="1" value="${+(v.mode*100).toFixed(2)}" aria-label="Más probable de ${L.name}"><input type="number" step="1" value="${+(v.max*100).toFixed(2)}" aria-label="Máximo de ${L.name}"></div>`;
+  box.appendChild(d); }
+ box.querySelectorAll("input,select").forEach(e=>e.addEventListener("change",()=>{ buildStressInputs(true); deterministic(); }));
+}
+function readVars(){ const o={}; document.querySelectorAll("#varList .v").forEach(d=>{ const i=d.querySelectorAll("input"); const s=d.querySelector("select");
+ let mn=+i[1].value/100, md=+i[2].value/100, mx=+i[3].value/100; if(mn>mx){const t=mn;mn=mx;mx=t;} md=Math.min(mx,Math.max(mn,md));
+ o[d.dataset.k]={on:i[0].checked,dist:s.value,min:mn,mode:md,max:mx}; }); return o; }
+function loadRows(rows,label){ LAST_ROWS=compactRows(rows); LAST_LABEL=label;
+ try{ D=ENG.parseRows(rows); }catch(e){ setStatus(e.message,"bad"); D=null; $("#run").disabled=true; return; }
+ const c=ENG.checkBase(D,OPT);
+ const s=D.s; const warn=[];
+ if(s.AUDIT!=="OK") warn.push("la auditoría del Excel no está en OK");
+ if(s.SCEN&&s.SCEN!=="Base") warn.push(`el escenario activo del Excel es “${s.SCEN}”: se toma como caso base`);
+ if(c.base.inv0<=0) warn.push("no hay inversión cargada");
+ const ok=c.ok&&!warn.length;
+ setStatus(`<b>${label}</b><br>Caso base reproducido: VAN ${usd(c.base.van)} (Excel ${usd(s.VAN_XL)}) · ${c.ok?"coincide ✔":"difiere ⚠"}${warn.length?"<br>⚠ "+warn.join("; ")+".":""}`, ok?"ok":(c.ok?"":"bad"));
+ RES=null; STRESS_RATES=null; varRows();
+ $("#corr").value=ENG.num(s.MC_CORR??0.5)||0.5;
+ const pbo=s.MC_PBOBJ; $("#pbobj").value=(typeof pbo==="number"&&pbo>0)?pbo:(c.base.pbd?+c.base.pbd.toFixed(1):"");
+ if(typeof s.MC_ITER==="number") $("#iter").value=s.MC_ITER;
+ $("#linkLoan").checked=s.MC_LINKLOAN!=="No"; OPT.linkLoan=$("#linkLoan").checked;
+ $("#run").disabled=false; updateRunLabel(); $("#btnSave").disabled=false; $("#btnPdf").disabled=false; if(!RESTORING){ DIRTY=true; showSave(); }
+ $("#heroText").innerHTML="Datos listos. Ajustá las variables y simulá.";
+ $("#heroChart").innerHTML=""; $("#statsTable").innerHTML='<div class="empty">Sin simulación todavía.</div>'; $("#mult").innerHTML="";
+ buildStressInputs(true); deterministic(); slInit(); beInit(); readRender(); insights();
+}
+function setStatus(h,cls){ const e=$("#loadStatus"); e.innerHTML=h; e.className="status "+(cls||""); }
+function readFile(file){ const fr=new FileReader(); fr.onload=ev=>{ try{
+  const wb=XLSX.read(new Uint8Array(ev.target.result),{type:"array"}); const n=wb.SheetNames.find(n=>/monte\s*carlo/i.test(n));
+  if(!n){ setStatus("El archivo no tiene la hoja “Simulación Monte Carlo”. Usá la versión actualizada del Excel OVOCOR Fase 4.","bad"); return; }
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
+  const hasVals=rows.some(r=>r&&r[0]==="VAN_XL"&&r[2]!==null);
+  if(!hasVals){ setStatus("La hoja no tiene valores calculados. Abrí el Excel, dejá que recalcule y guardalo antes de subirlo.","bad"); return; }
+  loadRows(rows,file.name);
+ }catch(e){ setStatus("No se pudo leer el archivo: "+e.message,"bad"); } }; fr.readAsArrayBuffer(file); }
+const drop=$("#drop"), fileIn=$("#file");
+drop.addEventListener("click",()=>fileIn.click()); drop.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();fileIn.click();} });
+fileIn.addEventListener("change",()=>{ if(fileIn.files[0]) readFile(fileIn.files[0]); });
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) readFile(f); });
+$("#demo").addEventListener("click",()=>loadRows(DEMO,"Datos de ejemplo (valores ficticios, no son de OVOCOR)"));
+$("#linkLoan").addEventListener("change",()=>{OPT.linkLoan=$("#linkLoan").checked; if(D){ deterministic(); }});
+$("#pbobj").addEventListener("change",()=>{ if(D) deterministic(); if(RES) render(); if(D) insights(); });
+$("#iter").addEventListener("input",updateRunLabel);
+function updateRunLabel(){ const n=Math.max(1000,Math.round(+$("#iter").value||50000)); $("#run").textContent=`Simular ${fmtN.format(n)} escenarios`; }
+function pbObj(){ const v=+$("#pbobj").value; return v>0?v:0; }
+$("#run").addEventListener("click",()=>{ if(!D) return; const b0=ENG.evaluate(D,ENG.baseFactors(),OPT); if(!(b0.inv0>0)||!D.products.some(p=>p.active)){ $("#runInfo").textContent="El Excel no tiene inversión o ventas cargadas: completalo antes de simular."; return; } const vars=readVars(); if(!Object.values(vars).some(v=>v.on)){ $("#runInfo").textContent="Activá al menos una variable."; return; }
+ const n=Math.max(1000,Math.min(200000,Math.round(+$("#iter").value||50000)));
+ $("#run").disabled=true; $("#prog").style.width="0%"; const t0=performance.now();
+ MC.run(D,{iter:n,refYear:+$("#beYear").value||ENG.num(D.s.PEY),seed:+$("#seed").value||1,vars,corr:+$("#corr").value||0,linkLoan:OPT.linkLoan,priceMode:$("#priceMode").value,chunk:2000},
+  p=>{$("#prog").style.width=(p*100).toFixed(0)+"%"; $("#runInfo").textContent=`Simulando… ${fmtN.format(p*n)} de ${fmtN.format(n)}`;},
+  res=>{ RES=res; RES.vars=vars; RES.refYear=+$("#beYear").value||ENG.num(D.s.PEY); $("#run").disabled=false; $("#runInfo").textContent=`${fmtN.format(n)} escenarios en ${fmt1.format((performance.now()-t0)/1000)} s · semilla ${$("#seed").value}`; render(); buildStressInputs(false); insights(); });
+});
+// ---------- gráficos SVG ----------
+function scaleLin(d0,d1,r0,r1){ return v=>r0+(v-d0)*(r1-r0)/((d1-d0)||1); }
+function ticks(a,b,n){ const span=b-a||1; const step0=span/n; const mag=Math.pow(10,Math.floor(Math.log10(step0))); const st=[1,2,2.5,5,10].map(m=>m*mag).find(s=>span/s<=n)||mag*10; const out=[]; for(let v=Math.ceil(a/st)*st; v<=b+1e-9; v+=st) out.push(Math.abs(v)<st*1e-6?0:v); return out; }
+function hist(sortedVals,opt){
+ const nref=(opt.refs||[]).length; const W=opt.w||760,H=(opt.h||250)+nref*6,ml=46,mr=14,mt=12+Math.max(1,nref)*14,mb=34; const n=sortedVals.length; if(!n) return '<div class="empty">Sin valores numéricos.</div>';
+ let lo=MC.pct(sortedVals,0.005), hi=MC.pct(sortedVals,0.995); for(const r of (opt.refs||[])){ if(isFinite(r.x)){ lo=Math.min(lo,r.x); hi=Math.max(hi,r.x);} } if(hi<=lo){hi=lo+1;}
+ const pad=(hi-lo)*0.03; lo-=pad; hi+=pad; const B=opt.bins||56, bw=(hi-lo)/B; const cnt=new Array(B).fill(0);
+ for(const v of sortedVals){ let k=Math.floor((v-lo)/bw); k=Math.max(0,Math.min(B-1,k)); cnt[k]++; }
+ const mx=Math.max(...cnt); const X=scaleLin(lo,hi,ml,W-mr), Y=scaleLin(0,mx,H-mb,mt);
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${opt.aria||"Histograma"}">`;
+ for(const t of ticks(lo,hi,6)) s+=`<line x1="${X(t)}" x2="${X(t)}" y1="${mt}" y2="${H-mb}" stroke="var(--grid)"/><text x="${X(t)}" y="${H-mb+16}" text-anchor="middle">${opt.fx(t)}</text>`;
+ for(let k=0;k<B;k++){ const x0=lo+k*bw, x1=x0+bw; const neg=opt.split!==undefined&&(opt.badRight?((x0+x1)/2>opt.split):((x0+x1)/2<opt.split)); const y=Y(cnt[k]);
+  s+=`<rect x="${X(x0)+0.5}" y="${y}" width="${Math.max(0.5,X(x1)-X(x0)-1)}" height="${H-mb-y}" fill="${neg?"var(--bar-neg)":"var(--bar)"}" opacity="${neg?0.85:0.8}"/>`; }
+ s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-mb}" y2="${H-mb}" stroke="var(--muted)"/>`;
+ (opt.refs||[]).forEach((r,j)=>{ if(!isFinite(r.x)) return; const x=X(r.x); s+=`<line x1="${x}" x2="${x}" y1="${12+j*14}" y2="${H-mb}" stroke="${r.c}" stroke-width="2" stroke-dasharray="${r.dash||"0"}"/><text x="${x+(r.anchor==="end"?-5:5)}" y="${16+j*14}" text-anchor="${r.anchor||"start"}" style="fill:${r.c};font-weight:600">${r.label}</text>`; });
+ if(opt.note) s+=`<text x="${W-mr}" y="${H-4}" text-anchor="end">${opt.note}</text>`;
+ return s+"</svg>"; }
+function scurve(sv,opt){ const W=760,H=230,ml=46,mr=14,mt=16,mb=34; const n=sv.length; const lo=MC.pct(sv,0.002),hi=MC.pct(sv,0.998); const X=scaleLin(lo,hi,ml,W-mr),Y=scaleLin(0,1,H-mb,mt);
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva de probabilidad acumulada del VAN">`;
+ for(const t of ticks(lo,hi,6)) s+=`<line x1="${X(t)}" x2="${X(t)}" y1="${mt}" y2="${H-mb}" stroke="var(--grid)"/><text x="${X(t)}" y="${H-mb+16}" text-anchor="middle">${usdc(t)}</text>`;
+ for(const q of [0,.25,.5,.75,1]) s+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(q)}" y2="${Y(q)}" stroke="var(--grid)"/><text x="${ml-6}" y="${Y(q)+4}" text-anchor="end">${q*100}%</text>`;
+ let d=""; const st=Math.max(1,Math.floor(n/400)); for(let i=0;i<n;i+=st){ const v=Math.min(hi,Math.max(lo,sv[i])); d+=(d?"L":"M")+X(v).toFixed(1)+","+Y(i/(n-1)).toFixed(1); }
+ s+=`<path d="${d}" fill="none" stroke="var(--navy)" stroke-width="2.5"/>`;
+ if(0>lo&&0<hi){ let k=0; while(k<n&&sv[k]<0)k++; const p=k/n; s+=`<line x1="${X(0)}" x2="${X(0)}" y1="${mt}" y2="${H-mb}" stroke="var(--magenta)" stroke-width="2"/><circle cx="${X(0)}" cy="${Y(p)}" r="5" fill="var(--magenta)"/><text x="${X(0)+8}" y="${Y(p)-6}" style="fill:var(--magenta);font-weight:600">${pc(p)} con VAN < 0</text>`; }
+ return s+"</svg>"; }
+function tornadoSVG(items,base){ const W=500,rowH=34,ml=168,mr=20,mt=26; const H=mt+items.length*rowH+30;  let lo=base,hi=base; for(const it of items){lo=Math.min(lo,it.a,it.b);hi=Math.max(hi,it.a,it.b);} const pad=(hi-lo)*0.06||1; lo-=pad; hi+=pad;
+ const X=scaleLin(lo,hi,ml,W-mr); let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico tornado del VAN">`;
+ for(const t of ticks(lo,hi,5)) s+=`<line x1="${X(t)}" x2="${X(t)}" y1="${mt-6}" y2="${H-26}" stroke="var(--grid)"/><text x="${X(t)}" y="${H-8}" text-anchor="middle">${usdc(t)}</text>`;
+ items.forEach((it,i)=>{ const y=mt+i*rowH; const a=Math.min(it.a,it.b), b=Math.max(it.a,it.b);
+  s+=`<text x="${ml-8}" y="${y+18}" text-anchor="end" style="fill:var(--ink)">${it.name}</text>`;
+  s+=`<rect x="${X(Math.min(a,base))}" y="${y+4}" width="${Math.max(0,X(base)-X(Math.min(a,base)))}" height="${rowH-12}" fill="var(--bar-neg)" opacity=".85"/>`;
+  s+=`<rect x="${X(base)}" y="${y+4}" width="${Math.max(0,X(Math.max(b,base))-X(base))}" height="${rowH-12}" fill="var(--bar)" opacity=".85"/>`; });
+ s+=`<line x1="${X(base)}" x2="${X(base)}" y1="${mt-10}" y2="${H-26}" stroke="var(--ink)" stroke-width="1.5"/><text x="${X(base)}" y="${mt-12}" text-anchor="middle" style="fill:var(--ink);font-weight:600">Caso base ${usdc(base)}</text>`;
+ if(0>lo&&0<hi) s+=`<line x1="${X(0)}" x2="${X(0)}" y1="${mt-6}" y2="${H-26}" stroke="var(--magenta)" stroke-dasharray="4 3"/>`;
+ return s+"</svg>"; }
+// ---------- render de la simulación ----------
+function render(){ if(!RES||!D) return; const base=ENG.evaluate(D,ENG.baseFactors(),Object.assign({},OPT,{refYear:RES.refYear})); 
+ const o={pb:pbObj(),roimin:ENG.num(D.s.ROIMIN),base}; const n=RES.n;
+ const sv=MC.stats(RES.out.van); let loss=0; for(const v of RES.out.van) if(v<0) loss++;
+ $("#heroText").innerHTML=`El VAN es el valor de hoy (año 0) de todos los flujos de los ${NH()} años del proyecto, en ${MON()}, descontados a la tasa de corte anual. En <b class="${loss/n>0.2?"neg":""}">${pc(loss/n)}</b> de los ${fmtN.format(n)} escenarios simulados ese valor es negativo: el proyecto, en su vida completa, rinde menos que el costo del capital. La mediana es <b>${usd(sv.p50)}</b> frente a ${usd(base.van)} del caso base; en 9 de cada 10 escenarios queda entre ${usd(sv.p5)} y ${usd(sv.p95)}.`;
+ $("#heroChart").innerHTML=hist(sv.sorted,{fx:usdc,split:0,aria:"Histograma del VAN simulado",refs:[{x:0,label:"VAN = 0",c:"var(--magenta)"},{x:base.van,label:"Caso base",c:"var(--ink)",dash:"5 4"},{x:sv.p5,label:"P5",c:"var(--muted)",dash:"2 3",anchor:"end"},{x:sv.p95,label:"P95",c:"var(--muted)",dash:"2 3"}]});
+ // tabla
+ let h=`<table><thead><tr><th>Indicador</th><th>Caso base</th><th>P5</th><th>P10</th><th>Mediana</th><th>P90</th><th>P95</th><th>Media</th><th>Prob. desfa­vorable</th></tr></thead><tbody>`;
+ for(const I of IND){ const arr=RES.out[I.k]; const st=MC.stats(arr); let bad=0; for(let i=0;i<n;i++){ const v=arr[i]; if(isNaN(v)){ if(I.nanBad) bad++; } else if(I.bad(v,o,i)) bad++; }
+  const ok=I.k==="tire"?true:true; const bv=base[I.k];
+  h+=`<tr><td>${I.lab}<span class="unit">${UNIT(I.k)}</span><span class="unit">Desfavorable si: ${I.crit}</span></td><td class="num">${I.f(bv)}</td><td class="num">${I.f(st.p5)}</td><td class="num">${I.f(st.p10)}</td><td class="num"><b>${I.f(st.p50)}</b></td><td class="num">${I.f(st.p90)}</td><td class="num">${I.f(st.p95)}</td><td class="num">${I.f(st.mean)}</td><td class="${bad/n>0.2?"neg":""}">${pc(bad/n)}${st.nan&&I.nanLab?`<br><span class="small">${pc(st.nan/n)} ${I.nanLab}</span>`:""}</td></tr>`; }
+ h+="</tbody></table>"; $("#statsTable").innerHTML=h;
+ const st=k=>MC.stats(RES.out[k]);
+ const tir=st("tir"), pbs=st("pbd"), cae=st("cae"), roi=st("roi");
+ $("#mult").innerHTML=
+  `<figure><figcaption>TIR frente a la tasa de corte</figcaption>${hist(tir.sorted,{fx:v=>fmt1.format(v*100)+"%",w:440,h:210,refs:[{x:base.r,label:"Tasa de corte",c:"var(--magenta)"},{x:base.tir,label:"Base",c:"var(--ink)",dash:"5 4",anchor:"end"}],split:base.r})}</figure>`+
+  `<figure><figcaption>Payback dinámico (años desde el año 0, flujos descontados a la tasa de corte)</figcaption>${hist(pbs.sorted,{fx:v=>fmt1.format(v),w:440,h:210,refs:(o.pb?[{x:o.pb,label:"Objetivo "+fmt1.format(o.pb)+" años",c:"var(--magenta)"}]:[]).concat(base.pbd!==null?[{x:base.pbd,label:"Base",c:"var(--ink)",dash:"5 4",anchor:"end"}]:[]),split:o.pb||undefined,badRight:true,note:pbs.nan?`${pc(pbs.nan/n)} de los escenarios no recupera la inversión`:""})}</figure>`+
+  `<figure><figcaption>Costo anual equivalente del equipamiento</figcaption>${hist(cae.sorted,{fx:usdc,w:440,h:210,refs:[{x:base.cae,label:"Base",c:"var(--ink)",dash:"5 4"}]})}</figure>`+
+  `<figure><figcaption>ROI contable</figcaption>${hist(roi.sorted,{fx:v=>fmt1.format(v*100)+"%",w:440,h:210,refs:o.roimin?[{x:o.roimin,label:"Mínimo exigido",c:"var(--magenta)"}]:[],split:o.roimin||undefined})}</figure>`+
+  `<figure style="grid-column:1/-1"><figcaption>Probabilidad acumulada del VAN</figcaption>${scurve(sv.sorted)}</figure>`;
+ deterministic();
+}
+// ---------- análisis determinístico: tornado, quiebres, restablecimiento ----------
+function leverUnits(){ // promedios anuales del caso base para traducir % a US$
+ const X=D.ser; let op=0,h=0,ot=0,fx=0,cap=0; for(let t=0;t<X.OP.length;t++){ if(X.OP[t]===1){op++; h+=X.CHUEVO[t]; ot+=X.CENV[t]+X.COTR[t]; fx+=X.FIX[t];} cap+=X.CAPEX[t]; }
+ op=op||1; return {HUEVO:h/op,OTROS:ot/op,FIJOS:fx/op,CAPEX:cap}; }
+function deterministic(){ if(!D) return; const vars=readVars(); const f0=ENG.baseFactors(); const base=ENG.evaluate(D,f0,OPT);
+ // tornado
+ const items=[]; for(const L of LV){ const v=vars[L.key]; if(!v||!v.on) continue; const lo=MC.inv(v,0.10), hi=MC.inv(v,0.90); const ch1={},ch2={}; ch1[L.key]=lo; ch2[L.key]=hi;
+  const a=ENG.evaluate(D,MC.factorsFrom(ch1),OPT).van, b=ENG.evaluate(D,MC.factorsFrom(ch2),OPT).van; items.push({name:L.name,a,b,lo,hi,range:Math.abs(a-b),key:L.key}); }
+ items.sort((p,q)=>q.range-p.range);
+ $("#tornado").innerHTML=items.length?tornadoSVG(items,base.van)+`<p class="small">Rosa: lado que reduce el VAN. Azul: lado que lo aumenta.</p>`:'<div class="empty">Activá al menos una variable.</div>';
+ // sensibilidad: elasticidad + spearman
+ const U=leverUnits(); let s=`<table><thead><tr><th>Variable</th><th>Rango P10 a P90</th><th>Efecto en el VAN (valor de hoy) de mejorar 1% en todos los años</th><th>Correlación con el VAN (simulación)</th></tr></thead><tbody>`;
+ for(const L of LV){ const v=vars[L.key]; const better=(L.key==="PRECIO"||L.key==="VOL")?1.01:0.99; const x=L.key==="TASA"?-0.01:better;
+  const dv=ENG.evaluate(D,MC.applyLever(f0,L.key,x),OPT).van-base.van; const it=items.find(i=>i.key===L.key);
+  const rho=(RES&&RES.inp[L.key])?MC.spearman(RES.inp[L.key],RES.out.van):NaN;
+  s+=`<tr><td>${L.name}</td><td>${it?(L.key==="TASA"?pp(it.lo)+" a "+pp(it.hi):chg(it.lo)+" a "+chg(it.hi)):'<span class="small">no simulada</span>'}</td><td>${usd(dv)}${L.key==="TASA"?'<br><span class="small">por −1 pp</span>':""}</td><td>${isFinite(rho)?x2(rho):"—"}</td></tr>`; }
+ $("#sensTable").innerHTML=s+"</tbody></table>";
+ // quiebres
+ const pb=pbObj(); let bt=`<table><thead><tr><th>Variable</th><th>Cambio permanente (todos los años) que lleva el VAN a 0</th><th>Valor de quiebre</th><th>Cambio permanente para payback descontado = ${pb?fmt1.format(pb)+" años":"objetivo"}</th></tr></thead><tbody>`;
+ for(const L of LV){ const z=MC.solve(D,f0,L.key,"van",0,OPT); const neutral=L.key==="TASA"?0:1; const c=z.ok?z.x-neutral:null;
+  let val="—"; if(z.ok){ if(L.key==="PRECIO"){ const pm=base.pmix; val=(pm?`<b>Precio mix: US$ ${fmt2.format(pm*z.x)}/kg</b><br>`:"")+(D.products.filter(p=>p.active&&p.price>0).map(p=>`${p.name}: US$ ${fmt2.format(p.price*z.x)}/kg`).join("<br>")||""); }
+   else if(U[L.key]!==undefined){ val=(L.key==="CAPEX"?"Inversión total ":"Promedio anual ")+usd(U[L.key]*z.x); } else if(L.key==="TASA"){ const r2=ENG.evaluate(D,MC.applyLever(f0,"TASA",z.x),OPT).r; val="Tasa de corte "+pc(r2); } else val=chg(c)+" de volumen"; }
+    const zt=pb?MC.solve(D,f0,L.key,"pbd",pb,OPT):{ok:false};
+  bt+=`<tr><td>${L.name}</td><td>${z.ok?(L.key==="TASA"?pp(c):chg(c)):'<span class="chip no">no alcanza sola</span>'}</td><td class="small" style="text-align:left">${val}</td><td>${zt.ok?(L.key==="TASA"?pp(zt.x):chg(zt.x-1)):(pb?'<span class="chip no">no alcanza sola</span>':"—")}</td></tr>`; }
+ $("#breakTable").innerHTML=bt+`</tbody></table><p class="small">Caso base: VAN ${usd(base.van)}, TIR ${pc(base.tir)}, tasa de corte ${pc(base.r)}, payback descontado ${yrs(base.pbd)}. Cada fila mueve una sola variable; en la práctica varias se mueven juntas (eso lo mide la simulación).</p>`;
+ calcRestore();
+}
+function solveTir(f0,key,base){ // TIR = tasa de corte del mismo escenario
+ const R={PRECIO:[0.2,4],HUEVO:[0,4],OTROS:[0,4],FIJOS:[0,4],CAPEX:[0.02,4],VOL:[0.1,4]}[key]; const g=x=>{ const r=ENG.evaluate(D,MC.applyLever(f0,key,x),OPT); return (r.tir===null?-1:r.tir)-r.r; };
+ const g1=g(1); for(const dir of [1,-1]){ const end=dir>0?R[1]:R[0]; let xa=1,ga=g1; for(let k=1;k<=60;k++){ const xb=1+(end-1)*k/60, gb=g(xb); if(ga*gb<=0){ let a=xa,b=xb,fa=ga; for(let i=0;i<60;i++){ const m=(a+b)/2,fm=g(m); if(fa*fm<=0)b=m; else {a=m;fa=fm;} } return {ok:true,x:(a+b)/2}; } xa=xb; ga=gb; } } return {ok:false}; }
+function buildStressInputs(useAdverse){ if(!D) return; const vars=readVars(); const cur={}; document.querySelectorAll("#stressInputs input").forEach(i=>cur[i.dataset.k]=+i.value);
+ let h=`<table><thead><tr><th>Variable del escenario de deterioro</th><th>Cambio</th></tr></thead><tbody>`;
+ for(const L of LV){ const v=vars[L.key]; let val=0; if(useAdverse||cur[L.key]===undefined){ if(v&&v.on){ const adv=(L.key==="PRECIO"||L.key==="VOL")?MC.inv(v,0.10):MC.inv(v,0.90); val=+(adv*100).toFixed(2);} } else val=cur[L.key];
+  h+=`<tr><td>${L.name}</td><td><input type="number" step="0.5" data-k="${L.key}" value="${val}" aria-label="Cambio de ${L.name}"> ${L.key==="TASA"?"pp":"%"}</td></tr>`; }
+ $("#stressInputs").innerHTML=h+"</tbody></table>";
+ document.querySelectorAll("#stressInputs input").forEach(i=>i.addEventListener("change",()=>{ if(i.dataset.k==="TASA") STRESS_RATES=null; calcRestore(); })); }
+$("#stressAdverse").addEventListener("click",()=>{STRESS_RATES=null;buildStressInputs(true);calcRestore();});
+$("#stressZero").addEventListener("click",()=>{STRESS_RATES=null;document.querySelectorAll("#stressInputs input").forEach(i=>i.value=0);calcRestore();});
+$("#stressCalc").addEventListener("click",calcRestore);
+function calcRestore(){ if(!D) return; const ch={}; document.querySelectorAll("#stressInputs input").forEach(i=>ch[i.dataset.k]=(+i.value||0)/100);
+ const fS=MC.factorsFrom(ch); if(STRESS_RATES){ fS.rates=STRESS_RATES; } const base=ENG.evaluate(D,ENG.baseFactors(),OPT), str=ENG.evaluate(D,fS,OPT); const pb=pbObj()||base.pbd||0;
+ const rows=[["VAN","van",usd],["TIR","tir",pc],["TIR modificada","tirm",pc],["Tasa de corte","r",pc],["Payback descontado","pbd",yrs],["ROI","roi",pc],["Costo anual equivalente","cae",usd],["Beneficio anual equivalente","bae",usd],["VAN del inversionista","vane",usd],["DSCR mínimo","dscr",x2]];
+ let t=`<div class="two"><div><h3>Cómo se degrada el proyecto</h3><table><thead><tr><th>Indicador</th><th>Caso base</th><th>Con deterioro</th></tr></thead><tbody>`;
+ for(const [l,k,f] of rows){ const a=base[k],b=str[k]; let cls=""; if(isFinite(a)&&isFinite(b)&&a!==b){ const worse=(k==="pbs"||k==="pbd"||k==="cae"||k==="r")?b>a:b<a; cls=worse?"neg":"pos"; } if((k==="pbs"||k==="pbd")&&b===null) cls="neg"; t+=`<tr><td>${l}</td><td>${f(a)}</td><td class="${cls}"><b>${f(b)}</b></td></tr>`; }
+ t+=`</tbody></table></div><div><h3>Qué palanca lo restablece</h3><p class="small">Cambio adicional, sobre el escenario de deterioro, de una sola palanca. Verde: la de menor esfuerzo relativo para cada objetivo.</p>`;
+ const U=leverUnits(); const res=[];
+ for(const L of LV){ const a=MC.solve(D,fS,L.key,"van",base.van,OPT), b=MC.solve(D,fS,L.key,"pbd",pb,OPT), c=MC.solve(D,fS,L.key,"van",0,OPT); res.push({L,a,b,c}); }
+ const neutral=L=>L.key==="TASA"?0:1; const eff=(r,L)=>r.ok?Math.abs(r.x-neutral(L))*(L.key==="TASA"?1:1):Infinity;
+ const bestOf=k=>{ let m=Infinity,w=null; for(const r of res){ const e=eff(r[k],r.L); if(e<m){m=e;w=r.L.key;} } return w; };
+ const bA=bestOf("a"), bB=bestOf("b"), bC=bestOf("c");
+ const show=(r,L,best)=>{ if(r.na) return `<td class="small">no afecta el payback simple</td>`; if(!r.ok) return `<td><span class="chip no">no alcanza sola</span></td>`; const d=r.x-neutral(L); let extra="";
+  if(U[L.key]!==undefined){ const cur=U[L.key]*(L.key==="HUEVO"?fS.huevo:L.key==="OTROS"?fS.otros:L.key==="FIJOS"?fS.fijos:fS.capex); extra=`<br><span class="small">${L.key==="CAPEX"?"":"≈ "}${usd(cur*Math.abs(d))}${L.key==="CAPEX"?" de inversión":" por año"}</span>`; }
+  if(L.key==="PRECIO"){ const pm=ENG.evaluate(D,ENG.baseFactors(),OPT).pmix; if(pm) extra=`<br><span class="small">Precio mix: US$ ${fmt2.format(pm*fS.price[0]*r.x)}/kg</span>`; }
+  return `<td class="${best===L.key?"best":""}">${L.key==="TASA"?pp(d):chg(d)}${extra}</td>`; };
+ t+=`<table><thead><tr><th>Palanca</th><th>Volver al VAN base</th><th>Payback descontado = ${fmt1.format(pb)} años</th><th>VAN = 0</th></tr></thead><tbody>`;
+ for(const r of res) t+=`<tr><td>${r.L.name}</td>${show(r.a,r.L,bA)}${show(r.b,r.L,bB)}${show(r.c,r.L,bC)}</tr>`;
+ t+=`</tbody></table></div></div>`;
+ const best=res.find(r=>r.L.key===bA); let msg=`Con este escenario el VAN pasa de ${usd(base.van)} a <b>${usd(str.van)}</b> y el payback descontado de ${yrs(base.pbd)} a <b>${yrs(str.pbd)}</b>.`;
+ if(best&&best.a.ok) msg+=` La palanca de menor esfuerzo para volver al VAN base es <b>${best.L.name.toLowerCase()}</b> (${best.L.key==="TASA"?pp(best.a.x):chg(best.a.x-1)}).`;
+ const bp=res.find(r=>r.L.key===bB); if(bp&&bp.b.ok) msg+=` Para cumplir el payback descontado de ${fmt1.format(pb)} años, la de menor esfuerzo es <b>${bp.L.name.toLowerCase()}</b> (${bp.L.key==="TASA"?pp(bp.b.x):chg(bp.b.x-1)}).`;
+ if(STRESS_RATES) msg=`Tasas tomadas de los deslizadores: tasa libre de riesgo ${fmt2.format(STRESS_RATES.rf*100)}%, riesgo país ${fmtN.format(STRESS_RATES.rp)} pb, prima ${fmt2.format(STRESS_RATES.prima*100)}%, préstamo ${fmt2.format(STRESS_RATES.lr*100)}% (la fila de tasa suma puntos sobre esas tasas). `+msg;
+ $("#restoreOut").innerHTML=`<div class="note">${msg}</div>`+t+`<p class="small">Las palancas no se suman linealmente: si se combinan, conviene volver a probar el escenario combinado cargándolo arriba.</p>`;
+}
+
+// ---------- deslizadores ----------
+const SDEF=[
+ {g:"Ingresos",c:"gIng",k:"PRECIO",lab:"Precio de venta (mix)",min:-50,max:50,step:0.5,u:"%"},
+ {g:"Ingresos",c:"gIng",k:"VOL",lab:"Volumen vendido",min:-50,max:50,step:0.5,u:"%"},
+ {g:"Egresos",c:"gEgr",k:"HUEVO",lab:"Costo del huevo",min:-50,max:100,step:0.5,u:"%"},
+ {g:"Egresos",c:"gEgr",k:"OTROS",lab:"Otros costos variables",min:-30,max:60,step:0.5,u:"%"},
+ {g:"Egresos",c:"gEgr",k:"FIJOS",lab:"Costos fijos y egresos nuevos",min:-30,max:60,step:0.5,u:"%"},
+ {g:"Egresos",c:"gEgr",k:"CAPEX",lab:"Inversión (CAPEX)",min:-30,max:60,step:0.5,u:"%"},
+ {g:"Tasas en USD",c:"gTas",k:"RF",lab:"Tasa libre de riesgo en USD (Tesoro EE.UU.)",min:2,max:10,step:0.05,u:"% anual",abs:true},
+ {g:"Tasas en USD",c:"gTas",k:"RP",lab:"Riesgo país Argentina (sobre tasas en USD)",min:200,max:5000,step:10,u:"pb",abs:true},
+ {g:"Tasas en USD",c:"gTas",k:"PRIMA",lab:"Prima de riesgo del proyecto en USD",min:0,max:20,step:0.25,u:"% anual",abs:true},
+ {g:"Tasas en USD",c:"gTas",k:"LR",lab:"Tasa del préstamo bancario en USD (no en pesos)",min:2,max:60,step:0.25,u:"% anual",abs:true}];
+let SB=null; let STRESS_RATES=null;
+function slInit(){ if(!D) return; const s=D.s;
+ SB={RF:ENG.num(s.RF)*100,RP:ENG.num(s.RP),PRIMA:ENG.num(s.PRIMA)*100,LR:ENG.num(s.LR)*100};
+ const groups={}; for(const d of SDEF){ (groups[d.g]=groups[d.g]||{c:d.c,items:[]}).items.push(d); }
+ let h='<div class="sgrid">';
+ for(const [g,o] of Object.entries(groups)){ h+=`<div class="sgroup ${o.c}"><h3>${g}</h3>`;
+  for(const d of o.items){ const v0=d.abs?SB[d.k]:0; const mn=Math.min(d.min,Math.floor(v0)), mx=Math.max(d.max,Math.ceil(v0));
+   h+=`<div class="sl"><div class="top"><label for="sl_${d.k}">${d.lab}</label><span class="val" id="sv_${d.k}"></span></div>
+   <input type="range" id="sl_${d.k}" min="${mn}" max="${mx}" step="${d.step}" value="${v0}" data-k="${d.k}">
+   <div class="ends"><span>${fmtU(mn,d)}</span><span>${d.abs?"Excel: "+fmtU(v0,d):"caso base 0%"}</span><span>${fmtU(mx,d)}</span></div></div>`; }
+  if(g==="Tasas en USD") h+=`<div class="kebox" id="keBox"></div>`;
+  h+='</div>'; }
+ h+='</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px"><button id="slReset">Volver al caso base</button><button id="slToStress">Usar como escenario de deterioro</button></div>';
+ const warn=[]; if(ENG.num(s.KEOVR)>0) warn.push("el Excel usa una rentabilidad exigida manual (K4) de "+pc(ENG.num(s.KEOVR))); if(ENG.num(s.WACCOVR)>0) warn.push("el Excel usa una tasa de corte manual de "+pc(ENG.num(s.WACCOVR)));
+ if(warn.length) h+=`<div class="note">Atención: ${warn.join(" y ")}. Los deslizadores de tasas la reemplazan por la suma tasa libre de riesgo + riesgo país + prima, para poder simular cada componente.</div>`;
+ h+='<div class="two"><div class="tablewrap" id="slTable"></div><div><h3>Flujo libre por año (USD)</h3><div id="slChart"></div></div></div>';
+ $("#slideBox").innerHTML=h;
+ document.querySelectorAll("#slideBox input[type=range]").forEach(i=>i.addEventListener("input",slSched));
+ $("#slReset").addEventListener("click",()=>{ document.querySelectorAll("#slideBox input[type=range]").forEach(i=>{ const d=SDEF.find(x=>x.k===i.dataset.k); i.value=d.abs?SB[d.k]:0; }); slCalc(); });
+ $("#slToStress").addEventListener("click",slToStress);
+ slCalc(); }
+function fmtU(v,d){ if(d.u==="pb") return fmtN.format(v)+" pb"; if(d.abs) return fmt2.format(v)+"%"; return (v>0?"+":"")+fmt1.format(v)+"%"; }
+let slPending=false; function slSched(){ if(slPending) return; slPending=true; requestAnimationFrame(()=>{slPending=false; slCalc();}); }
+function slVals(){ const o={}; document.querySelectorAll("#slideBox input[type=range]").forEach(i=>o[i.dataset.k]=+i.value); return o; }
+function slFactors(v){ const f=ENG.baseFactors(); for(let p=0;p<f.price.length;p++) f.price[p]=1+v.PRECIO/100; f.vol=1+v.VOL/100; f.huevo=1+v.HUEVO/100; f.otros=1+v.OTROS/100; f.fijos=1+v.FIJOS/100; f.capex=Math.max(0.01,1+v.CAPEX/100);
+ f.rates={rf:v.RF/100,rp:v.RP,prima:v.PRIMA/100,lr:v.LR/100}; return f; }
+function slCalc(){ if(!D) return; const v=slVals(); for(const d of SDEF){ const e=$("#sv_"+d.k); if(e){ const delta=d.abs?v[d.k]-SB[d.k]:0; e.innerHTML=fmtU(v[d.k],d)+(d.abs&&Math.abs(delta)>1e-9?` <span class="small">(${delta>0?"+":""}${d.u==="pb"?fmtN.format(delta)+" pb":fmt2.format(delta)+" pp"})</span>`:""); } }
+ const base=ENG.evaluate(D,ENG.baseFactors(),OPT); const fb=ENG.baseFactors(); fb.rates={rf:SB.RF/100,rp:SB.RP,prima:SB.PRIMA/100,lr:SB.LR/100};
+ const sim=ENG.evaluate(D,slFactors(v),OPT);
+ const adj=ENG.num(D.s.MRATE)+ENG.num(D.s.NEWRATE);
+ $("#keBox").innerHTML=`Rentabilidad exigida por los socios (Ke) = ${fmt2.format(v.RF)}% + ${fmt2.format(v.RP/100)}% + ${fmt2.format(v.PRIMA)}%${adj?` + ${fmt2.format(adj*100)}% de ajustes`:""} = <b>${pc(sim.ken)}</b><br>Tasa de corte del proyecto (WACC, USD) = <b>${pc(sim.r)}</b> <span class="small">(caso base ${pc(base.r)})</span>`;
+ const rows=[["Precio mix de régimen","pmix",v=>(v===null||!isFinite(v))?"n/d":"US$ "+fmt2.format(v),1],["Ingreso anual de régimen","ireg",usdc,1],["VAN","van",usdc,1],["TIR","tir",pc,1],["TIR modificada","tirm",pc,1],["Tasa de corte (WACC)","r",pc,-1],["Payback dinámico (descontado)","pbd",yrs,-1],["ROI","roi",pc,1],["Costo anual equivalente","cae",usdc,-1],["Beneficio anual equivalente","bae",usdc,1],["Índice de rentabilidad (IR)","ir",x2,1],["Eficiencia de la inversión (EI)","ei",pc,1],["VAN del inversionista","vane",usdc,1],["TIR del inversionista","tire",pc,1],["DSCR mínimo","dscr",x2,1]];
+ let t=`<p class="small">Los deslizadores cambian el valor en todos los años del horizonte (cambio permanente), no en un solo año.</p><table><thead><tr><th>Indicador</th><th>Caso base</th><th>Con deslizadores</th><th>Cambio</th></tr></thead><tbody>`;
+ for(const [l,k,f,dir] of rows){ const a=base[k],b=sim[k]; let d="—",cls="";
+  if(isFinite(a)&&isFinite(b)&&a!==null&&b!==null){ const diff=b-a; if(Math.abs(diff)>1e-9){ cls=(diff*dir>0)?"dpos":"dneg"; d=(k==="pmix")?(diff>0?"+":"")+"US$ "+fmt2.format(diff):(f===usdc)?(diff>0?"+":"")+usdc(diff):(f===pc)?pp(diff):(f===yrs)?(diff>0?"+":"")+fmt1.format(diff)+" años":(diff>0?"+":"")+fmt2.format(diff);} else d="sin cambio"; }
+  else if((k==="pbs"||k==="pbd")&&b===null&&a!==null){ d="ya no recupera"; cls="dneg"; }
+  t+=`<tr><td>${l}<span class="unit">${UNIT(k)}</span></td><td class="num">${f(a)}</td><td class="num"><b>${f(b)}</b></td><td class="num ${cls}">${d}</td></tr>`; }
+ $("#slTable").innerHTML=t+"</tbody></table>";
+ $("#slChart").innerHTML=fcfChart(base.fcf,sim.fcf,ENG.num(D.s.N));
+ if($("#beYear").options.length) beRender();
+ insSched();
+}
+function fcfChart(a,b,N){ const W=520,H=260,ml=74,mr=10,mt=24,mb=30; const n=N+1; let lo=0,hi=0; for(let t=0;t<n;t++){lo=Math.min(lo,a[t],b[t]);hi=Math.max(hi,a[t],b[t]);} if(hi===lo)hi=lo+1;
+ const Y=scaleLin(lo,hi,H-mb,mt), bw=(W-ml-mr)/n; let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Flujo libre por año, caso base y con deslizadores">`;
+ for(const tk of ticks(lo,hi,5)) s+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(tk)}" y2="${Y(tk)}" stroke="var(--grid)"/><text x="${ml-6}" y="${Y(tk)+4}" text-anchor="end">${usdc(tk)}</text>`;
+ for(let t=0;t<n;t++){ const x=ml+t*bw; for(const [i,v,col] of [[0,a[t],"var(--muted)"],[1,b[t],v=>v]]){ const val=i?b[t]:a[t]; const y0=Y(0),y1=Y(val); const c=i?(val<0?"var(--bar-neg)":"var(--bar)"):"var(--line)";
+   s+=`<rect x="${x+bw*0.12+i*bw*0.38}" y="${Math.min(y0,y1)}" width="${bw*0.36}" height="${Math.max(1,Math.abs(y1-y0))}" fill="${c}"/>`; }
+  s+=`<text x="${x+bw/2}" y="${H-10}" text-anchor="middle">${t}</text>`; }
+ s+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)"/>`;
+ s+=`<rect x="${ml}" y="6" width="10" height="10" fill="var(--line)"/><text x="${ml+14}" y="15">Caso base</text><rect x="${ml+90}" y="6" width="10" height="10" fill="var(--bar)"/><text x="${ml+104}" y="15">Con deslizadores</text>`;
+ return s+"</svg>"; }
+function slToStress(){ const v=slVals(); const base=ENG.evaluate(D,ENG.baseFactors(),OPT); const sim=ENG.evaluate(D,slFactors(v),OPT);
+ const map={PRECIO:v.PRECIO,VOL:v.VOL,HUEVO:v.HUEVO,OTROS:v.OTROS,FIJOS:v.FIJOS,CAPEX:v.CAPEX,TASA:0};
+ STRESS_RATES={rf:v.RF/100,rp:v.RP,prima:v.PRIMA/100,lr:v.LR/100};
+ document.querySelectorAll("#stressInputs input").forEach(i=>{ if(map[i.dataset.k]!==undefined) i.value=map[i.dataset.k]; });
+ calcRestore(); $("#secRestore").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); }
+
+// ---------- punto mínimo y punto de equilibrio ----------
+const kg=v=>(v===null||v===undefined||!isFinite(v))?"n/d":fmtN.format(v)+" kg";
+function beInit(){ if(!D) return; const N=ENG.num(D.s.N); const sel=$("#beYear"); const ref=Math.round(ENG.num(D.s.PEY))||1; const fr=Math.round(ENG.num(D.s.FREG))||0;
+ sel.innerHTML=""; for(let t=1;t<=N;t++){ const o=document.createElement("option"); o.value=t; o.textContent=`Año ${t}`+(t===fr?" (primer año de régimen)":""); if(t===ref) o.selected=true; sel.appendChild(o); }
+ sel.onchange=()=>{ beRender(); insights(); }; beRender(); }
+function curFactors(){ return (SB&&$("#slideBox input[type=range]"))?slFactors(slVals()):ENG.baseFactors(); }
+function beRender(){ if(!D) return; const y=+$("#beYear").value||1; const f=curFactors();
+ const r=ENG.evaluate(D,f,Object.assign({},OPT,{refYear:y})); const b=ENG.evaluate(D,ENG.baseFactors(),Object.assign({},OPT,{refYear:y})); const be=r.be;
+ const vol=be.vol[y], qm=be.qmin[y], qe=be.qeq[y], rpk=be.rpk[y];
+ if(!(vol>0)){ $("#beBox").innerHTML='<div class="empty">No hay volumen de productos en ese año.</div>'; return; }
+ const ms=qe!==null?1-qe/vol:null;
+ let msg=qe===null?`En el año ${y} la contribución marginal por kg no es positiva: el proyecto no alcanza el equilibrio con ningún volumen.`:
+  `En el año ${y} se planifican <b>${kg(vol)}</b> de productos. El punto mínimo es <b>${kg(qm)}</b> (${pc(qm/vol)} del plan) y el punto de equilibrio <b>${kg(qe)}</b> (${pc(qe/vol)} del plan). `+(qe<=vol?`El volumen puede caer hasta <b class="pos">${pc(ms)}</b> antes de entrar en pérdida.`:`<b class="neg">El volumen planificado no alcanza el punto de equilibrio.</b>`);
+ const row=(l,a,bb,fmt)=>`<tr><td>${l}</td><td class="num">${fmt(bb)}</td><td class="num"><b>${fmt(a)}</b></td></tr>`;
+ let t=`<div class="note">${msg}</div><div class="two"><div class="tablewrap"><table><thead><tr><th>Año ${y}</th><th>Caso base</th><th>Con deslizadores</th></tr></thead><tbody>`;
+ t+=row("Volumen planificado de productos",vol,b.be.vol[y],kg);
+ t+=row("Precio mix del año (USD/kg)",vol>0?(r.be.rev[y]/vol):null,b.be.vol[y]>0?b.be.rev[y]/b.be.vol[y]:null,v=>isFinite(v)?"US$ "+fmt2.format(v):"n/d");
+ t+=row("Contribución marginal por kg (USD/kg)",be.cmu[y],b.be.cmu[y],v=>isFinite(v)?"US$ "+fmt2.format(v):"n/d");
+ t+=row("Costos fijos operativos (USD/año)",be.cf[y],b.be.cf[y],usd);
+ t+=row("Costos fijos totales con amortizaciones e intereses",be.ct[y],b.be.ct[y],usd);
+ t+=row("<b>Punto mínimo</b>",qm,b.be.qmin[y],kg);
+ t+=row("Punto mínimo / volumen planificado",qm!==null?qm/vol:null,b.be.qmin[y]!==null?b.be.qmin[y]/b.be.vol[y]:null,pc);
+ t+=row("Punto mínimo en ventas",qm!==null?qm*rpk:null,b.be.qmin[y]!==null?b.be.qmin[y]*b.be.rpk[y]:null,usd);
+ t+=row("<b>Punto de equilibrio</b>",qe,b.be.qeq[y],kg);
+ t+=row("Punto de equilibrio / volumen planificado",qe!==null?qe/vol:null,b.be.qeq[y]!==null?b.be.qeq[y]/b.be.vol[y]:null,pc);
+ t+=row("Punto de equilibrio en ventas",qe!==null?qe*rpk:null,b.be.qeq[y]!==null?b.be.qeq[y]*b.be.rpk[y]:null,usd);
+ t+=row("Margen de seguridad",ms,b.be.qeq[y]!==null?1-b.be.qeq[y]/b.be.vol[y]:null,pc);
+ t+=`</tbody></table></div><div><h3>Ingresos y costos según el volumen (año ${y})</h3>${cvpChart(be,y)}</div></div>`;
+ t+=`<h3 style="margin-top:14px">Volumen planificado frente a los dos puntos, año por año</h3>${beYears(be,ENG.num(D.s.N))}<p class="small">Los años de rampa suelen quedar por debajo del punto de equilibrio: ahí el proyecto todavía no cubre todos sus costos.</p>`;
+ $("#beBox").innerHTML=t; }
+function cvpChart(be,y){ const W=520,H=300,ml=74,mr=14,mt=26,mb=36; const vol=be.vol[y],cmu=be.cmu[y],rpk=be.rpk[y],cf=Math.max(0,be.cf[y]),ct=Math.max(0,be.ct[y]); const vck=rpk-cmu;
+ const qmax=Math.max(vol*1.3,(be.qeq[y]||0)*1.2,1); const yv=q=>[rpk*q, ct+vck*q, cf+vck*q]; const top=Math.max(...yv(qmax)),X=scaleLin(0,qmax,ml,W-mr),Y=scaleLin(0,top*1.05,H-mb,mt);
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de ingresos y costos según el volumen">`;
+ for(const tk of ticks(0,top*1.05,5)) s+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(tk)}" y2="${Y(tk)}" stroke="var(--grid)"/><text x="${ml-6}" y="${Y(tk)+4}" text-anchor="end">${usdc(tk)}</text>`;
+ for(const tk of ticks(0,qmax,5)) s+=`<text x="${X(tk)}" y="${H-mb+16}" text-anchor="middle">${fmtN.format(tk/1000)} t</text>`;
+ const line=(fn,c,w,dash)=>`<line x1="${X(0)}" y1="${Y(fn(0))}" x2="${X(qmax)}" y2="${Y(fn(qmax))}" stroke="${c}" stroke-width="${w}" ${dash?`stroke-dasharray="${dash}"`:""}/>`;
+ s+=line(q=>cf,"var(--muted)",1.5,"4 3")+line(q=>ct,"var(--muted)",1.5,"1 3");
+ s+=line(q=>cf+vck*q,"var(--amber)",2.5)+line(q=>ct+vck*q,"var(--magenta)",2.5)+line(q=>rpk*q,"var(--teal)",3);
+ const mark=(q,c,lab,dy)=>{ if(q===null||!isFinite(q)||q>qmax) return ""; const yy=Y(rpk*q); return `<circle cx="${X(q)}" cy="${yy}" r="6" fill="${c}"/><text x="${X(q)+8}" y="${yy+dy}" style="fill:${c};font-weight:600">${lab}</text>`; };
+ s+=mark(be.qmin[y],"var(--amber)","Punto mínimo",16)+mark(be.qeq[y],"var(--magenta)","Punto de equilibrio",-8);
+ s+=`<line x1="${X(vol)}" x2="${X(vol)}" y1="${mt}" y2="${H-mb}" stroke="var(--navy)" stroke-width="2" stroke-dasharray="6 4"/><text x="${X(vol)-4}" y="${mt-8}" text-anchor="end" style="fill:var(--navy);font-weight:600">Volumen planificado</text>`;
+ s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-mb}" y2="${H-mb}" stroke="var(--muted)"/>`;
+ const lg=[["var(--teal)","Ingresos"],["var(--magenta)","Costos totales"],["var(--amber)","Costos operativos"]]; lg.forEach((l,i)=>{ s+=`<rect x="${ml+i*120}" y="${H-12}" width="12" height="4" fill="${l[0]}"/><text x="${ml+16+i*120}" y="${H-7}">${l[1]}</text>`; });
+ return s+"</svg>"; }
+function beYears(be,N){ const W=760,H=250,ml=74,mr=14,mt=30,mb=30; let hi=1; for(let t=1;t<=N;t++) hi=Math.max(hi,be.vol[t]||0,be.qeq[t]||0,be.qmin[t]||0); const bw=(W-ml-mr)/N; const Y=scaleLin(0,hi*1.08,H-mb,mt);
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Volumen planificado, punto mínimo y punto de equilibrio por año">`;
+ for(const tk of ticks(0,hi*1.08,5)) s+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(tk)}" y2="${Y(tk)}" stroke="var(--grid)"/><text x="${ml-6}" y="${Y(tk)+4}" text-anchor="end">${fmtN.format(tk/1000)} t</text>`;
+ const cx=t=>ml+(t-0.5)*bw;
+ for(let t=1;t<=N;t++){ const v=be.vol[t]||0, below=be.qeq[t]!==null&&v<be.qeq[t]; s+=`<rect x="${cx(t)-bw*0.32}" y="${Y(v)}" width="${bw*0.64}" height="${Math.max(0,H-mb-Y(v))}" fill="${below?"var(--bar-neg)":"var(--bar)"}" opacity=".75"/><text x="${cx(t)}" y="${H-10}" text-anchor="middle">${t}</text>`; }
+ const path=(arr,c,dash)=>{ let d=""; for(let t=1;t<=N;t++){ if(arr[t]===null||!isFinite(arr[t])) continue; d+=(d?"L":"M")+cx(t).toFixed(1)+","+Y(Math.min(arr[t],hi*1.08)).toFixed(1); } return d?`<path d="${d}" fill="none" stroke="${c}" stroke-width="2.5" ${dash?`stroke-dasharray="${dash}"`:""}/>`:""; };
+ s+=path(be.qmin,"var(--amber)")+path(be.qeq,"var(--magenta)","6 4");
+ s+=`<rect x="${ml}" y="8" width="12" height="10" fill="var(--bar)" opacity=".75"/><text x="${ml+16}" y="17">Volumen planificado</text><rect x="${ml+150}" y="8" width="12" height="10" fill="var(--bar-neg)" opacity=".75"/><text x="${ml+166}" y="17">Debajo del equilibrio</text><line x1="${ml+320}" x2="${ml+340}" y1="13" y2="13" stroke="var(--amber)" stroke-width="2.5"/><text x="${ml+344}" y="17">Punto mínimo</text><line x1="${ml+440}" x2="${ml+460}" y1="13" y2="13" stroke="var(--magenta)" stroke-width="2.5" stroke-dasharray="6 4"/><text x="${ml+464}" y="17">Punto de equilibrio</text>`;
+ return s+"</svg>"; }
+// ---------- cómo leer + datos leídos ----------
+function readRender(){ if(!D) return; const s=D.s, N=NH(); const b=ENG.evaluate(D,ENG.baseFactors(),OPT);
+ const items=[
+  ["Horizonte",`${N} años de operación (años 1 a ${N}); el año 0 es el momento de la inversión.`],
+  ["Moneda",`Todo en ${MON()}${ENG.num(s.REALF)===1?" (sin inflación; la tasa de corte se convierte a real)":" (con la variación de precios y costos cargada en el Excel)"}. Los importes en pesos se convirtieron en el Excel.`],
+  ["Flujos",`Anuales, al cierre de cada año. Los cambios de los deslizadores y de la simulación se aplican a todos los años.`],
+  ["Dos flujos",`Económico del proyecto: sin intereses, descontado con el WACC después de impuestos (base del VAN, TIR, IR, eficiencia y payback). Financiero del inversionista: intereses restados antes del impuesto, descontado con Ke (VAN y TIR del inversionista, DSCR).`],
+  ["VAN y VAN del inversionista","Valor de hoy (año 0) de todos los flujos del horizonte: es un monto único, no anual."],
+  ["TIR, TIR modificada, tasa de corte, ROI","Porcentajes anuales. El ROI es el promedio anual del resultado neto sobre la inversión."],
+  ["Costo y beneficio anual equivalente",`Montos por año, constantes durante los ${N} años.`],
+  ["Payback descontado","Años desde el año 0 hasta recuperar la inversión con los flujos descontados a la tasa de corte anual."],
+  ["Punto mínimo y de equilibrio","Kilos por año de productos en el año de análisis elegido."]];
+ let h=`<div class="readgrid">`+items.map(([a,bb])=>`<div><b>${a}:</b> ${bb}</div>`).join("")+`</div>`;
+ h+=`<details><summary>Datos leídos del Excel (control): indicadores, flujos en estructura estándar y cuadro del préstamo</summary><div class="two"><div class="tablewrap"><table><tbody>`;
+ const kv=[["Escenario activo en el Excel",s.SCEN||"—"],["Auditoría del Excel",s.AUDIT||"—"],["Inversión total (activos + preoperativos)",usd(b.inv0)],["Ingreso anual de régimen (precios del año 1)",usd(b.ireg)],["Precio mix de régimen",b.pmix?"US$ "+fmt2.format(b.pmix)+" por kg":"n/d"],["Primer año de régimen",s.FREG??"—"],["Tasa de corte (WACC) anual",pc(b.r)],["Rentabilidad exigida por los socios (Ke) anual",pc(b.ken)],["Préstamo bancario",usd(ENG.num(s.LOAN))+" al "+pc(ENG.num(s.LR))+" anual"],["Saldo financiado por proveedores",usd(ENG.num(s.SUPDEBT))],["Productos con ventas",D.products.filter(p=>p.active).map(p=>p.name).join(", ")||"ninguno"]];
+ h+=kv.map(([a,bb])=>`<tr><td>${a}</td><td class="num">${bb}</td></tr>`).join("")+`</tbody></table></div><div class="tablewrap"><table><thead><tr><th>Año</th><th>Flujo libre según el Excel</th><th>Flujo libre recalculado</th><th>Acumulado</th></tr></thead><tbody>`;
+ let cum=0; for(let t=0;t<=N;t++){ cum+=b.fcf[t]; h+=`<tr><td>${t}</td><td class="num">${usd(D.ser.FCF_XL[t])}</td><td class="num">${usd(b.fcf[t])}</td><td class="num ${cum<0?"neg":""}">${usd(cum)}</td></tr>`; }
+ h+=`</tbody></table></div></div>`;
+ { const st=b.st, K=v=>`<td class="num">${usd(v)}</td>`;
+  h+=`<h3 style="margin-top:12px">Flujo de fondos económico del proyecto · estructura estándar (USD)</h3><p class="small">Sin intereses: el costo de la deuda entra por la tasa de descuento (WACC, con Kd × (1 − alícuota)). Las depreciaciones se restan para calcular Ganancias y se vuelven a sumar porque no son salida de dinero.</p><div class="tablewrap"><table><thead><tr><th>Año</th><th>Ingresos</th><th>(−) Costos operativos</th><th>(−) Deprec. y amortiz.</th><th>(±) Venta de activos</th><th>(=) Utilidad antes de imp.</th><th>(−) Ganancias</th><th>(=) Utilidad neta</th><th>(+) Deprec. y amortiz.</th><th>(−) Resultado venta</th><th>(±) Capital de trabajo</th><th>(−) CapEx</th><th>(±) IVA</th><th>(+) Residual y otros</th><th>(=) Flujo libre</th></tr></thead><tbody>`;
+  for(let t=0;t<=N;t++) h+=`<tr><td>${t}</td>${K(st.rev[t])}${K(-st.cop[t])}${K(-st.dep[t])}${K(st.gain[t])}${K(st.ebit[t])}${K(-st.tax[t])}${K(st.ni[t])}${K(st.dep[t])}${K(-st.gain[t])}${K(st.wc[t])}${K(-st.capex[t])}${K(st.iva[t])}${K(st.resid[t]+st.otros[t])}<td class="num"><b>${usd(st.fcf[t])}</b></td></tr>`;
+  h+=`</tbody></table></div>`;
+  h+=`<h3 style="margin-top:12px">Flujo de fondos financiero del inversionista · estructura estándar (USD)</h3><p class="small">Los intereses se restan antes del impuesto (escudo fiscal en el flujo) y el flujo se descuenta con la rentabilidad exigida por los socios (Ke).</p><div class="tablewrap"><table><thead><tr><th>Año</th><th>EBIT</th><th>(−) Intereses</th><th>(=) Utilidad antes de imp.</th><th>(−) Ganancias</th><th>(=) Utilidad neta</th><th>(+) Deprec. y amortiz.</th><th>(−) Resultado venta</th><th>(±) CT, CapEx, IVA, residual y otros</th><th>(+) Préstamo y proveedores</th><th>(−) Capital de la deuda</th><th>(=) Flujo del inversionista</th></tr></thead><tbody>`;
+  for(let t=0;t<=N;t++) h+=`<tr><td>${t}</td>${K(st.ebit[t])}${K(-st.int[t])}${K(st.iebt[t])}${K(-st.itax[t])}${K(st.ini[t])}${K(st.dep[t])}${K(-st.gain[t])}${K(st.wc[t]-st.capex[t]+st.iva[t]+st.resid[t]+st.otros[t])}${K(st.loan[t]+st.sup[t])}${K(-st.lam[t]-st.sam[t])}<td class="num"><b>${usd(st.eqf[t])}</b></td></tr>`;
+  h+=`</tbody></table></div>`; }
+ const LO=ENG.num(s.LOAN);
+ if(LO>0){ h+=`<h3 style="margin-top:12px">Cuadro del préstamo bancario (USD)</h3><p class="small">${usd(LO)} al ${pc(ENG.num(s.LR))} anual en USD, sistema ${ENG.num(s.LSYS_ALEMAN)===1?"alemán":"francés"}, ${Math.round(ENG.num(s.LG))} año(s) de gracia y ${Math.round(ENG.num(s.LN))} de amortización. Columnas “Excel” y “recalculado”: deben coincidir.</p><div class="tablewrap"><table><thead><tr><th>Año</th><th>Saldo inicial</th><th>Intereses (Excel)</th><th>Capital (Excel)</th><th>Cuota total</th><th>Intereses (recalculado)</th><th>Capital (recalculado)</th><th>Saldo final</th></tr></thead><tbody>`;
+  let bal=LO; for(let t=1;t<=N;t++){ const i=D.ser.LINT?D.ser.LINT[t]:b.lint[t], a=D.ser.LAM?D.ser.LAM[t]:b.lam[t]; if(bal<=0.005&&i<=0.005&&a<=0.005) break; const bi=bal; bal-=a;
+   h+=`<tr><td>${t}</td><td class="num">${usd(bi)}</td><td class="num">${usd(i)}</td><td class="num">${usd(a)}</td><td class="num"><b>${usd(i+a)}</b></td><td class="num">${usd(b.lint[t])}</td><td class="num">${usd(b.lam[t])}</td><td class="num">${usd(Math.max(0,bal))}</td></tr>`; }
+  h+=`</tbody></table></div>`; }
+ h+=`</details>`;
+ $("#readBox").innerHTML=h; }
+// ---------- conclusiones automáticas ----------
+let insPending=false; function insSched(){ if(insPending) return; insPending=true; requestAnimationFrame(()=>{insPending=false; insights();}); }
+function insights(opt){ opt=opt||{}; if(!D) return; const s=D.s, N=NH(), M=MON(); const f0=ENG.baseFactors(); const ry=+$("#beYear").value||Math.round(ENG.num(s.PEY))||1;
+ const b=ENG.evaluate(D,f0,Object.assign({},OPT,{refYear:ry}));
+ if(!(b.inv0>0)||!D.products.some(p=>p.active)){ const hh=`<div class="verdict v-mid"><span class="tag">Faltan datos</span><div>El Excel no tiene ${!(b.inv0>0)&&!D.products.some(p=>p.active)?"inversión ni ventas cargadas":!(b.inv0>0)?"inversión cargada":"ventas cargadas"}. Completá la Short list y la hoja Mix y rampa, guardá el archivo y volvé a subirlo. Sin esos datos no es posible calcular ningún indicador con sentido.</div></div>`; if(opt.html) return hh; $("#insBox").innerHTML=hh; return; }
+ const pb=pbObj(), roimin=ENG.num(s.ROIMIN), hasDebt=ENG.num(s.LOAN)>0||ENG.num(s.SUPDEBT)>0; const vars=readVars();
+ // escenario de los deslizadores
+ let sim=null; if(SB&&$("#slideBox input[type=range]")){ const v=slVals(); if(SDEF.some(d=>Math.abs(v[d.k]-(d.abs?SB[d.k]:0))>1e-9)) sim=ENG.evaluate(D,slFactors(v),Object.assign({},OPT,{refYear:ry})); }
+ // simulación: probabilidad desfavorable por indicador
+ const prob={}; let mc=null;
+ if(RES&&!opt.noMC){ const n=RES.n, o={pb,roimin,base:b}; for(const I of IND){ const arr=RES.out[I.k]; if(!arr) continue; let bad=0; for(let i=0;i<n;i++){ const v=arr[i]; if(isNaN(v)){ if(I.nanBad) bad++; } else if(I.bad(v,o,i)) bad++; } prob[I.k]=bad/n; }
+  prob.ei=prob.ir; const sv=MC.stats(RES.out.van); mc={loss:prob.van,p5:sv.p5,p50:sv.p50,p95:sv.p95,n}; }
+ // impulsores
+ const drv=[]; for(const L of LV){ const v=vars[L.key]; if(!v||!v.on) continue; const c1={},c2={}; c1[L.key]=MC.inv(v,0.10); c2[L.key]=MC.inv(v,0.90); const a=ENG.evaluate(D,MC.factorsFrom(c1),OPT).van, bb=ENG.evaluate(D,MC.factorsFrom(c2),OPT).van; drv.push({L,swing:Math.abs(a-bb)}); }
+ drv.sort((x,y)=>y.swing-x.swing); const dn=drv.slice(0,2).map(d=>d.L.name.toLowerCase()).join(" y ")||"precio y costos";
+ let cum=0,minc=0,miny=0; for(let t=0;t<=N;t++){ cum+=b.fcf[t]; if(cum<minc){minc=cum;miny=t;} }
+ const below=[]; for(let t=1;t<=N;t++){ const q=b.be.qeq[t]; if(q===null||b.be.vol[t]<q) below.push(t); }
+ const fr=Math.round(ENG.num(s.FREG))||null; const vol=b.be.vol[ry], qm=b.be.qmin[ry], qe=b.be.qeq[ry];
+ const ms=(qe!==null&&vol>0)?1-qe/vol:null; const msS=sim&&sim.be.qeq[ry]!==null&&sim.be.vol[ry]>0?1-sim.be.qeq[ry]/sim.be.vol[ry]:null;
+ const ok=c=>c===null?'<span class="small">—</span>':c?'<span class="chip best">Cumple</span>':'<span class="chip no">No cumple</span>';
+ const kgp=(q,v)=>q===null?"sin equilibrio":`${kg(q)}<span class="unit">${pc(q/v)} del plan, año ${ry}</span>`;
+ const rows=[
+  {n:"VAN",k:"van",v:usd(b.van),vs:sim?usd(sim.van):null,u:UNIT("van"),c:"> 0",ok:b.van>0,
+   r:b.van>0?`Crea valor: después de pagar el costo del capital quedan ${usd(b.van)} a valor de hoy. Paso: asegurar los supuestos que más lo mueven (${dn}).`:`No cubre el costo del capital. Paso: revisar precio, costos o inversión (ver Puntos de quiebre) antes de seguir.`},
+  {n:"TIR",k:"tir",v:pc(b.tir),vs:sim?pc(sim.tir):null,u:UNIT("tir"),c:`> tasa de corte (${pc(b.r)})`,ok:b.tir===null?null:b.tir>b.r,
+   r:b.tir===null?"No hay TIR: el flujo no cambia de signo.":(b.signs>1?`El flujo cambia de signo ${b.signs} veces: la TIR puede no ser única. Decidir con VAN y TIR modificada.`:(b.tir>b.r?`Rinde ${pp(b.tir-b.r).replace("+","")} por encima de la tasa de corte.`:`Rinde ${pp(b.r-b.tir).replace("+","")} por debajo de la tasa de corte.`))},
+  {n:"TIR modificada",k:"tirm",v:pc(b.tirm),vs:sim?pc(sim.tirm):null,u:UNIT("tirm"),c:`> tasa de corte (${pc(b.r)})`,ok:b.tirm===null?null:b.tirm>b.r,
+   r:"Referencia prudente: reinvierte los excedentes a una tasa realista y no tiene el problema de las TIR múltiples."},
+  {n:"Tasa de corte (WACC)",k:"r",v:pc(b.r),vs:sim?pc(sim.r):null,u:UNIT("r"),c:"Referencia",ok:null,
+   r:"Costo del capital en USD: tasa libre de riesgo + riesgo país + prima del proyecto, ponderado con el costo de la deuda."},
+  {n:"Índice de rentabilidad (IR)",k:"ir",v:x2(b.ir),vs:sim?x2(sim.ir):null,u:"VA de los flujos futuros / VA de la inversión (veces)",c:"> 1",ok:b.ir===null?null:b.ir>1,
+   r:b.ir===null?"n/d":b.ir>1?`En el caso base, cada dólar invertido devuelve ${x2(b.ir)} dólares a valor de hoy.`:b.ir>0?`En el caso base, cada dólar invertido devuelve solo ${x2(b.ir)} dólares a valor de hoy.`:"El valor de hoy de los flujos futuros es negativo: no se recupera ni lo invertido."},
+  {n:"Eficiencia de la inversión (EI)",k:"ei",v:pc(b.ei),vs:sim?pc(sim.ei):null,u:"VAN / VA de la inversión = IR − 1 (%)",c:"> 0%",ok:b.ei===null?null:b.ei>0,
+   r:b.ei===null?"n/d":b.ei>0?`Por cada dólar invertido se crean ${fmt2.format(b.ei*100)} centavos de valor por encima del costo del capital.`:`Por cada dólar invertido se pierden ${fmt2.format(-b.ei*100)} centavos de valor frente al costo del capital.`},
+  {n:"Payback dinámico",k:"pbd",v:yrs(b.pbd),vs:sim?yrs(sim.pbd):null,u:UNIT("pbd"),c:pb?`≤ ${fmt1.format(pb)} años (objetivo)`:"Definir objetivo",ok:pb?(b.pbd!==null&&b.pbd<=pb):null,
+   r:b.pbd===null?"No recupera la inversión con flujos descontados dentro del horizonte.":pb?(b.pbd<=pb?"Recupera dentro del plazo que exige la Empresa.":`Supera el objetivo en ${fmt1.format(b.pbd-pb)} años. Paso: ver la palanca de menor esfuerzo en Restablecer el equilibrio.`):"Cargar el payback máximo (K9) para evaluarlo."},
+  {n:"Payout",k:"payout",v:b.payout===null?"n/d":x2(b.payout)+" veces",vs:sim?(sim.payout===null?"n/d":x2(sim.payout)+" veces"):null,u:"(suma de flujos del horizonte + inversión) / inversión, sin descontar",c:"> 1",ok:b.payout===null?null:b.payout>1,
+   r:b.payout===null?"n/d":b.payout>1?`El flujo de caja del horizonte recupera ${x2(b.payout)} veces la inversión, sin descontar. Mide cuántas veces se recupera; el payback, en cuántos años.`:"El flujo del horizonte no alcanza a recuperar la inversión ni sin descontar."},
+  {n:"ROI contable",k:"roi",v:pc(b.roi),vs:sim?pc(sim.roi):null,u:UNIT("roi"),c:roimin?`≥ ${pc(roimin)} (mínimo K10)`:"Definir mínimo",ok:roimin?b.roi>=roimin:null,
+   r:"Indicador contable complementario: no considera cuándo llega el dinero; decide el VAN."},
+  {n:"Costo anual equivalente",k:"cae",v:usd(b.cae),vs:sim?usd(sim.cae):null,u:UNIT("cae"),c:"Comparativo",ok:null,
+   r:"Costo anual de tener y mantener el equipamiento (inversión − valor residual + mantenimiento). Sirve para comparar equipos o leasing."},
+  {n:"Beneficio anual equivalente",k:"bae",v:usd(b.bae),vs:sim?usd(sim.bae):null,u:UNIT("bae"),c:"> 0",ok:b.bae>0,
+   r:`El VAN repartido en cuotas iguales durante ${N} años.`},
+  {n:"VAN del inversionista",k:"vane",v:usd(b.vane),vs:sim?usd(sim.vane):null,u:UNIT("vane"),c:"> 0",ok:hasDebt?b.vane>0:null,
+   r:hasDebt?(b.vane>0?"Los socios ganan después de pagar la deuda.":"Después de la deuda, los socios no recuperan su rentabilidad exigida."):"Sin deuda: igual al flujo del proyecto."},
+  {n:"TIR del inversionista",k:"tire",v:pc(b.tire),vs:sim?pc(sim.tire):null,u:UNIT("tire"),c:`> Ke (${pc(b.ke)})`,ok:hasDebt&&b.tire!==null?b.tire>b.ke:null,r:"Rentabilidad anual de los fondos propios."},
+  {n:"DSCR mínimo",k:"dscr",v:b.dscr===null?"n/d":`${x2(b.dscr)}<span class="unit">año ${b.dscrYear} del flujo</span>`,vs:sim?(sim.dscr===null?"n/d":`${x2(sim.dscr)}<span class="unit">año ${sim.dscrYear}</span>`):null,u:"veces el servicio de deuda, en el año más ajustado",c:"≥ 1,3",ok:b.dscr===null?null:b.dscr>=1.3,
+   r:b.dscr===null?"Sin servicio de deuda en los años operativos.":(b.dscr>=1.3?`La caja cubre con margen la deuda en todos los años; el año más ajustado es el ${b.dscrYear}.`:
+    `El año más ajustado es el <b>año ${b.dscrYear}</b>: el flujo disponible (${usd(b.dscrAvail)}) ${b.dscr<1?`no alcanza para pagar el servicio de deuda (${usd(b.dscrServ)}); faltan <b>${usd(b.dscrGap)}</b>`:`cubre el servicio de deuda (${usd(b.dscrServ)}) sin el margen de 1,3`} y harían falta ${usd(b.dscrGap13)} para llegar a 1,3. Años con cobertura menor a 1,3: ${b.dscrLow.join(", ")}. El modelo es anual: indica el año; el mes depende del calendario de cuotas. Paso: más plazo o gracia en ese período, o un aporte por ese monto.`)},
+  {n:"Impuesto a las Ganancias del proyecto",k:"taxpv",v:usd(b.taxpv),vs:sim?usd(sim.taxpv):null,u:`${M}, valor de hoy de los ${N} años`,c:"Referencia",ok:null,
+   r:`Se calcula sobre la ganancia neta imponible (EBITDA − amortizaciones deducibles), a la alícuota de ${pc(ENG.num(s.TG))} anual. No se aplica sobre las ventas.`},
+  {n:"Ahorro de Ganancias por amortizaciones",k:"shieldpv",v:b.shieldpv===null?"Diferido (quebranto)":usd(b.shieldpv),vs:sim?(sim.shieldpv===null?"Diferido":usd(sim.shieldpv)):null,u:`${M}, valor de hoy de los ${N} años`,c:"Referencia",ok:null,
+   r:`Las amortizaciones se restan para calcular el impuesto (bajan la base) y se suman de nuevo en el flujo porque no son salida de caja.${ENG.num(s.AJINF_NO)===1?" Como no se actualizan, pierden valor en USD con la devaluación cargada.":""}`},
+  {n:"Necesidad máxima de financiamiento",k:"expo",v:usd(b.expo),vs:sim?usd(sim.expo):null,u:`USD, caja acumulada mínima (año ${b.expoYear})`,c:"Financiamiento asegurado",ok:null,
+   r:b.expo<0?`Hay que disponer de ${usd(-b.expo)} entre aportes y deuda hasta el año ${b.expoYear}, cuando la caja acumulada toca su mínimo.`:"El proyecto no necesita financiamiento adicional."},
+  {n:"Intereses totales de la deuda",k:"inttot",v:usd(b.inttot),vs:sim?usd(sim.inttot):null,u:"USD, suma del horizonte (banco + proveedores + comisión)",c:"Referencia",ok:null,
+   r:hasDebt?"Son una salida de caja en el flujo del inversionista y se deducen de Ganancias. El flujo del proyecto no los resta porque se descuenta con el WACC, que ya incluye el costo de la deuda.":"Sin deuda cargada."},
+  {n:"Cuota anual máxima del préstamo bancario",k:"cuotamax",v:usd(b.cuotamax),vs:sim?usd(sim.cuotamax):null,u:"USD por año, intereses + capital",c:"Cubierta por la caja",ok:ENG.num(s.LOAN)>0?(b.dscr===null||b.dscr>=1.3):null,
+   r:ENG.num(s.LOAN)>0?`Préstamo de ${usd(ENG.num(s.LOAN))} al ${pc(ENG.num(s.LR))} anual en USD; la cuota más alta es ${usd(b.cuotamax)}.`:"Sin préstamo bancario."},
+  {n:"Servicio de deuda máximo anual",k:"dsmax",v:usd(b.dsmax),vs:sim?usd(sim.dsmax):null,u:"USD por año, banco + proveedores",c:"Cubierto por la caja",ok:hasDebt?(b.dscr===null||b.dscr>=1.3):null,
+   r:hasDebt?"Máximo que se paga en un año entre préstamo y cuotas a proveedores.":"Sin deuda."},
+  {n:"Margen EBITDA en régimen",k:"ebmr",v:pc(b.ebmr),vs:sim?pc(sim.ebmr):null,u:"% de los ingresos, primer año de régimen",c:"> 0",ok:b.ebmr===null?null:b.ebmr>0,
+   r:b.ebmr===null?"n/d":`De cada dólar vendido en régimen quedan ${fmt2.format(b.ebmr*100)} centavos de EBITDA. Compararlo con el margen actual de la Empresa.`},
+  {n:"Punto mínimo",k:"pmin",v:kgp(qm,vol),vs:sim?kgp(sim.be.qmin[ry],sim.be.vol[ry]):null,u:"kg/año que cubren los costos fijos operativos",c:"< volumen planificado",ok:qm===null?false:qm<=vol,
+   r:qm===null?"La contribución por kg no es positiva.":qm<=vol?"Con este volumen el proyecto cubre sus costos fijos de operación (EBITDA positivo).":"Ni siquiera cubre los costos fijos de operación."},
+  {n:"Punto de equilibrio",k:"peq",v:kgp(qe,vol),vs:sim?kgp(sim.be.qeq[ry],sim.be.vol[ry]):null,u:"kg/año con ingresos = costos totales",c:"< volumen planificado",ok:qe===null?false:qe<=vol,
+   r:qe===null?"No hay volumen que iguale ingresos y costos.":qe<=vol?"El volumen planificado supera el equilibrio contable.":"El volumen planificado no alcanza el equilibrio. Paso: más volumen, más precio o menos costos fijos."},
+  {n:"Margen de seguridad",k:"ms",v:pc(ms),vs:sim?pc(msS):null,u:`% que puede caer el volumen del año ${ry} sin pérdida`,c:"≥ 20% recomendable",ok:ms===null?false:ms>=0.2,
+   r:ms===null?"n/d":ms>=0.2?"Holgura suficiente frente a caídas de volumen.":ms>0?"Holgura ajustada: una caída moderada de ventas genera pérdida.":"Sin holgura: ya se está por debajo del equilibrio."}];
+ // veredicto
+ const A=b.van>0; const lvl=!mc?null:mc.loss<=0.2?"bajo":mc.loss<=0.4?"moderado":"alto";
+ const req=[]; if(pb) req.push({t:`Payback dinámico ≤ ${fmt1.format(pb)} años`,ok:b.pbd!==null&&b.pbd<=pb}); if(hasDebt&&b.dscr!==null) req.push({t:"DSCR mínimo ≥ 1,3",ok:b.dscr>=1.3}); if(roimin) req.push({t:`ROI ≥ ${pc(roimin)}`,ok:b.roi>=roimin});
+ const reqFail=req.filter(x=>!x.ok);
+ let cls,tag,why;
+ if(!A){ cls="v-bad"; tag="No avanzar con estos supuestos"; why=`En el caso base el proyecto no cubre el costo del capital: VAN ${usd(b.van)}, índice de rentabilidad ${x2(b.ir)} (menor que 1) y eficiencia de la inversión ${pc(b.ei)}. Los tres indicadores dicen lo mismo.`; }
+ else if(lvl==="alto"){ cls="v-bad"; tag="No avanzar todavía: riesgo alto"; why=`El caso base crea valor (VAN ${usd(b.van)}; cada dólar devuelve ${x2(b.ir)} a valor de hoy), pero el caso base es solo uno de los futuros posibles: en ${pc(mc.loss)} de los ${fmtN.format(mc.n)} escenarios simulados el VAN es negativo. Los números del caso base y la conclusión no se contradicen: el proyecto es rentable si se cumplen los supuestos, y hoy esos supuestos son demasiado inciertos. Antes de invertir, reducir la incertidumbre de ${dn} y volver a simular.`; }
+ else if(!mc||lvl==="moderado"||reqFail.length){ cls="v-mid"; tag=mc?"Avanzar con condiciones":"Avanzar con condiciones (conclusión preliminar)"; const c=[]; if(!mc) c.push("todavía no se corrió la simulación, así que el riesgo no está medido"); if(lvl==="moderado") c.push(`en ${pc(mc.loss)} de los escenarios simulados el VAN es negativo`); reqFail.forEach(x=>c.push(`no se cumple: ${x.t.toLowerCase()}`));
+  why=`El caso base crea valor (VAN ${usd(b.van)}, índice de rentabilidad ${x2(b.ir)}), pero ${c.join("; ")}.`; }
+ else { cls="v-ok"; tag="Avanzar"; why=`Crea valor en el caso base (VAN ${usd(b.van)}, índice de rentabilidad ${x2(b.ir)}), el riesgo es bajo (${pc(mc.loss)} de escenarios con VAN negativo) y se cumplen los requisitos de la Empresa.`; }
+ const tick=v=>v===null?"—":v?"✔":"✖";
+ let h=`<h3>Tablero de indicadores${sim?" (caso base y escenario de los deslizadores)":" (caso base del Excel)"}</h3>`;
+ h+=`<div class="tablewrap"><table class="dash"><thead><tr><th>Indicador</th><th>Caso base</th>${sim?"<th>Con deslizadores</th>":""}<th>Criterio</th><th>Estado (caso base)</th>${mc?"<th>Prob. desfavorable (simulación)</th>":""}<th style="text-align:left">Lectura y paso a seguir</th></tr></thead><tbody>`;
+ for(const r of rows){ h+=`<tr><td><b>${r.n}</b><span class="unit">${r.u}</span></td><td class="num">${r.v}</td>${sim?`<td class="num">${r.vs}</td>`:""}<td class="small">${r.c}</td><td>${ok(r.ok)}</td>${mc?`<td class="num">${prob[r.k]!==undefined?pc(prob[r.k]):"—"}</td>`:""}<td class="small" style="text-align:left">${r.r}</td></tr>`; }
+ h+=`</tbody></table></div>`;
+ if(hasDebt) h+=`<p class="small"><b>Intereses y cuotas de la deuda:</b> el flujo libre del proyecto (VAN, TIR, IR, eficiencia) no resta intereses porque se descuenta con el WACC, que ya incluye el costo de la deuda; restarlos ahí sería contarlos dos veces. Los intereses, las cuotas de capital y el ahorro fiscal sí están, como salidas de caja en USD, en el flujo del inversionista (VAN y TIR del inversionista, DSCR). El cuadro del préstamo está en “Datos leídos del Excel”.</p>`;
+ h+=`<div class="verdict ${cls}"><span class="tag">${tag}</span><div>${why}</div></div>`;
+ h+=`<div class="ins"><h3>Cómo se llegó a la conclusión</h3><ol>`;
+ h+=`<li>${tick(A)} <b>¿Crea valor en el caso base?</b> ${A?"Sí":"No"}: VAN ${usd(b.van)}, IR ${x2(b.ir)}, eficiencia ${pc(b.ei)}. VAN > 0, IR > 1 y eficiencia > 0% son la misma condición vista de tres formas, por eso siempre coinciden.${b.signs>1?` La TIR (${pc(b.tir)}) puede no ser única porque el flujo cambia de signo ${b.signs} veces; se decide con el VAN.`:""}</li>`;
+ h+=`<li>${mc?tick(lvl!=="alto"):"—"} <b>¿Cuánto riesgo hay?</b> ${mc?`Riesgo ${lvl}: ${pc(mc.loss)} de los escenarios con VAN negativo (umbrales usados: hasta 20% bajo, hasta 40% moderado, más de 40% alto).`:"No medido: correr la simulación. Hasta entonces la conclusión es preliminar, porque se basa en un único escenario."}</li>`;
+ h+=`<li>${req.length?tick(!reqFail.length):"—"} <b>¿Cumple los requisitos de la Empresa?</b> ${req.length?req.map(x=>`${x.ok?"✔":"✖"} ${x.t}`).join(" · "):"No hay requisitos cargados (payback máximo K9, ROI mínimo K10); cargarlos en la Long list para evaluarlos."}</li>`;
+ if(sim) h+=`<li><b>Escenario de los deslizadores.</b> La conclusión se basa en el caso del Excel. Con los valores actuales de los deslizadores el VAN sería ${usd(sim.van)} y el payback dinámico ${yrs(sim.pbd)}: ${sim.van>0===A?"el resultado sobre la creación de valor no cambia.":sim.van>0?"pasaría a crear valor.":"<b class=\"neg\">dejaría de crear valor.</b>"}</li>`;
+ h+=`</ol>`;
+ // detalle
+ h+=`<h3>Qué dicen los números del caso base</h3><ol>`;
+ h+=`<li><b>Valor.</b> Sumando los ${N} años y llevándolos a hoy a ${pc(b.r)} anual, el proyecto ${b.van>=0?"crea":"destruye"} <b>${usd(Math.abs(b.van))}</b> (${M}, valor de hoy). Repartido en el horizonte equivale a ${usd(Math.abs(b.bae))} por año ${b.bae>=0?"por encima":"por debajo"} de lo que exige el capital.</li>`;
+ h+=`<li><b>Rentabilidad.</b> TIR ${pc(b.tir)} anual frente a una tasa de corte de ${pc(b.r)}; TIR modificada ${pc(b.tirm)} anual. Índice de rentabilidad ${x2(b.ir)} y eficiencia de la inversión ${pc(b.ei)}: ${b.ei>0?`cada dólar invertido crea ${fmt2.format(b.ei*100)} centavos de valor por encima del costo del capital`:`cada dólar invertido pierde ${fmt2.format(-b.ei*100)} centavos frente al costo del capital`}.</li>`;
+ h+=`<li><b>Recupero.</b> ${b.pbd===null?`Con flujos descontados, la inversión no se recupera dentro de los ${N} años`:`Payback dinámico de ${yrs(b.pbd)} desde el año 0`}${pb?` (objetivo: ${fmt1.format(pb)} años)`:""}. La caja acumulada toca su punto más bajo en el año ${miny}: <b>${usd(minc)}</b>, que es el financiamiento total que necesita el proyecto${b.pbs===null?" y no se recupera dentro del horizonte":""}.</li>`;
+ h+=`<li><b>Rampa y equilibrio.</b> ${fr?`El mix llega al régimen en el año ${fr}.`:"El mix no llega al régimen dentro del horizonte."} ${below.length?`En ${below.length===1?"el año":"los años"} ${below.slice(0,12).join(", ")}${below.length>12?"…":""} el volumen planificado queda por debajo del punto de equilibrio${below.length===1?": ese año hay pérdida contable y hay que financiarlo.":": en esos años hay pérdida contable y hay que financiarlos."}`:"Todos los años superan el punto de equilibrio."}</li>`;
+ if(mc) h+=`<li><b>Riesgo.</b> VAN mediano de los escenarios ${usd(mc.p50)}; en 9 de cada 10 escenarios queda entre ${usd(mc.p5)} y ${usd(mc.p95)}.</li>`;
+ h+=`</ol>`;
+ if(drv.length){ const t1=drv[0], z1=MC.solve(D,f0,t1.L.key,"van",0,OPT); h+=`<h3>Qué variables mandan</h3><ul><li><b>${t1.L.name}</b> es la variable que más mueve el VAN${drv[1]?`, seguida por <b>${drv[1].L.name.toLowerCase()}</b>`:""}: entre su valor desfavorable y favorable (P10 a P90) el VAN cambia ${usd(t1.swing)}.</li>${z1.ok?`<li>Punto de quiebre: ${t1.L.key==="TASA"?`con una suba de ${pp(z1.x)} en las tasas`:`con un cambio permanente de ${chg(z1.x-1)} en ${t1.L.name.toLowerCase()}`} el VAN llega a cero${t1.L.key==="PRECIO"&&b.pmix?` (precio mix de US$ ${fmt2.format(b.pmix*z1.x)} por kg)`:""}.</li>`:""}</ul>`; }
+ const rec=[];
+ if(s.AUDIT!=="OK") rec.push("Corregir primero los avisos de la auditoría del Excel: las conclusiones dependen de datos completos y consistentes.");
+ if(!A){ const zp=MC.solve(D,f0,"PRECIO","van",0,OPT), zh=MC.solve(D,f0,"HUEVO","van",0,OPT); rec.push(`Rediseñar el caso: para llegar al VAN cero haría falta ${zp.ok?`subir el precio mix ${chg(zp.x-1)}`:"una suba de precio que no alcanza sola"}${zh.ok?` o bajar el costo del huevo ${pc(Math.abs(zh.x-1))}`:""}, en forma permanente.`); }
+ const top=drv.slice(0,2).map(d=>d.L.key);
+ if(top.includes("PRECIO")) rec.push(`Asegurar el precio: contratos en dólares o con ajuste por tipo de cambio que cubran al menos el volumen de equilibrio${qe!==null?` (${kg(qe)} por año)`:""}.`);
+ if(top.includes("HUEVO")) rec.push("Cubrir el costo del huevo: contratos de abastecimiento con fórmula de precio (por ejemplo, atada al maíz) o integración con producción propia.");
+ if(top.includes("VOL")) rec.push(`Asegurar el volumen: pedidos firmes o cartas de intención por al menos ${qe!==null?kg(qe)+" por año":"el volumen de equilibrio"}.`);
+ if(top.includes("CAPEX")) rec.push("Cerrar cotizaciones firmes de equipos e instalaciones y mantener la contingencia.");
+ if(top.includes("TASA")) rec.push("Negociar y fijar la tasa del préstamo en dólares.");
+ if(pb&&!(b.pbd!==null&&b.pbd<=pb)){ let best=null; for(const L of LV){ const z=MC.solve(D,f0,L.key,"pbd",pb,OPT); const e=z.ok?(L.key==="TASA"?Math.abs(z.x):Math.abs(z.x-1)):Infinity; if(z.ok&&(!best||e<best.e)) best={L,x:z.x,e}; } rec.push(best?`Para cumplir el payback dinámico de ${fmt1.format(pb)} años, la palanca de menor esfuerzo es ${best.L.name.toLowerCase()}: ${best.L.key==="TASA"?pp(best.x):chg(best.x-1)} en forma permanente.`:`Con ninguna palanca individual se alcanza el payback dinámico de ${fmt1.format(pb)} años: revisar el objetivo o combinar medidas.`); }
+ if(hasDebt&&b.dscr!==null&&b.dscr<1.3) rec.push(`Cubrir el bache de la deuda en el año ${b.dscrYear}: ${b.dscr<1?`el flujo disponible no alcanza a pagar el servicio y faltan ${usd(b.dscrGap)}`:`la cobertura es de ${x2(b.dscr)} veces`}; para llegar a 1,3 harían falta ${usd(b.dscrGap13)}. Opciones: más período de gracia o plazo en ese tramo, o un aporte de los socios por ese monto.`);
+ if(minc<0) rec.push(`Asegurar el financiamiento de la rampa: la caja acumulada llega a ${usd(minc)} en el año ${miny}.`);
+ if(b.dcmaxYear<N&&b.dcmax-b.van>Math.max(1,0.01*Math.abs(b.van))) rec.push(`Revisar el horizonte de ${N} años: el valor acumulado es máximo en el año ${b.dcmaxYear} (${usd(b.dcmax)}) y después baja porque los flujos siguientes son negativos.`);
+ if(mc&&lvl!=="bajo") rec.push(`Reducir la incertidumbre antes de decidir: validar con el cliente ${dn}, y fijar un precio mínimo de alerta${b.pmix?` cercano a US$ ${fmt2.format(b.pmix)} por kg (precio mix de régimen)`:""}.`);
+ if(!mc) rec.push("Correr la simulación para medir el riesgo: es lo que falta para pasar de una conclusión preliminar a una definitiva.");
+ h+=`<h3>Recomendaciones</h3><ol>${rec.map(r=>`<li>${r}</li>`).join("")}</ol></div>`;
+ if(opt.html) return h; $("#insBox").innerHTML=h; }
+
+
+updateRunLabel();
+// ---------- guardar y restaurar ----------
+let LAST_ROWS=null, LAST_LABEL="", RESTORING=false, DIRTY=false, STORE=null, SAVED_AT=null;
+function compactRows(rows){ return rows.filter(r=>r&&typeof r[0]==="string"&&/^[A-Z][A-Z0-9_]*$/.test(r[0])).map(r=>{ const a=r.slice(0,70); while(a.length&&(a[a.length-1]===null||a[a.length-1]===undefined)) a.pop(); return a.map(v=>typeof v==="number"?+v.toPrecision(12):(v===undefined?null:v)); }); }
+const fmtDT=d=>new Intl.DateTimeFormat("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(d);
+function showSave(){ const e=$("#saveInfo"); if(!e) return;
+ if(DIRTY&&SAVED_AT){ e.textContent=`Cambios sin guardar · último guardado: ${fmtDT(SAVED_AT)}`; e.className="saveinfo dirty"; }
+ else if(DIRTY){ e.textContent="Cambios sin guardar"; e.className="saveinfo dirty"; }
+ else if(SAVED_AT){ e.textContent=`Último guardado: ${fmtDT(SAVED_AT)}${STORE&&STORE.kind==="local"?" (en este navegador)":""}`; e.className="saveinfo"; }
+ else { e.textContent="Sin cambios guardados"; e.className="saveinfo"; } }
+function markDirty(){ if(RESTORING||!D) return; DIRTY=true; showSave(); }
+async function getStore(){
+ if(STORE) return STORE;
+ try{ if(window.claude&&typeof window.claude.use==="function"){ const [db,user]=await Promise.all([window.claude.use("db"),window.claude.use("user")]);
+   if(db&&user){ const id=await user.id(); if(id){ const ref=db.doc(`data/users/${id}/estado`); STORE={kind:"cuenta",get:async()=>{ const s=await ref.get(); return s.exists?s.data():null; },set:async(o)=>ref.set(o)}; return STORE; } } } }catch(e){}
+ try{ const k="ovocor_f4_estado"; localStorage.setItem(k+"_t","1"); localStorage.removeItem(k+"_t");
+   STORE={kind:"local",get:async()=>{ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } },set:async(o)=>{ localStorage.setItem(k,JSON.stringify(o)); }}; }catch(e){ STORE=null; }
+ return STORE; }
+function captureState(){ const stress={}; document.querySelectorAll("#stressInputs input").forEach(i=>stress[i.dataset.k]=+i.value);
+ return {v:1,savedAt:new Date().toISOString(),label:LAST_LABEL,rows:JSON.stringify(LAST_ROWS),
+  ctl:{vars:readVars(),priceMode:$("#priceMode").value,corr:+$("#corr").value,iter:+$("#iter").value,seed:+$("#seed").value,pbobj:$("#pbobj").value,linkLoan:$("#linkLoan").checked,
+   sliders:(SB&&$("#slideBox input[type=range]"))?slVals():null,beYear:+$("#beYear").value||null,stress,stressRates:STRESS_RATES},ranMC:!!RES}; }
+async function doSave(){ if(!D||!LAST_ROWS) return; const st=await getStore(); const btn=$("#btnSave");
+ if(!st){ $("#saveInfo").textContent="No se puede guardar en esta vista."; return; }
+ btn.disabled=true; const prev=btn.textContent; btn.textContent="Guardando…";
+ try{ const o=captureState(); await st.set(o); SAVED_AT=new Date(o.savedAt); DIRTY=false; showSave(); }
+ catch(e){ $("#saveInfo").textContent="No se pudo guardar: "+(e&&e.message?e.message:"error"); $("#saveInfo").className="saveinfo dirty"; }
+ finally{ btn.textContent=prev; btn.disabled=false; } }
+function applyVars(vars){ document.querySelectorAll("#varList .v").forEach(d=>{ const v=vars[d.dataset.k]; if(!v) return; const i=d.querySelectorAll("input"); i[0].checked=!!v.on; d.querySelector("select").value=v.dist; i[1].value=+(v.min*100).toFixed(4); i[2].value=+(v.mode*100).toFixed(4); i[3].value=+(v.max*100).toFixed(4); }); }
+async function restoreState(o){ if(!o||!o.rows) return false; RESTORING=true;
+ try{ const rows=JSON.parse(o.rows); loadRows(rows,o.label||"Datos guardados"); if(!D){ RESTORING=false; return false; }
+  const c=o.ctl||{}; if(c.vars) applyVars(c.vars);
+  if(c.priceMode) $("#priceMode").value=c.priceMode; if(isFinite(c.corr)) $("#corr").value=c.corr; if(c.iter) $("#iter").value=c.iter; if(isFinite(c.seed)) $("#seed").value=c.seed;
+  $("#pbobj").value=c.pbobj??""; $("#linkLoan").checked=c.linkLoan!==false; OPT.linkLoan=$("#linkLoan").checked; updateRunLabel();
+  if(c.sliders) document.querySelectorAll("#slideBox input[type=range]").forEach(i=>{ if(c.sliders[i.dataset.k]!==undefined) i.value=c.sliders[i.dataset.k]; });
+  if(c.beYear&&[...$("#beYear").options].some(op=>+op.value===c.beYear)) $("#beYear").value=c.beYear;
+  buildStressInputs(false); if(c.stress) document.querySelectorAll("#stressInputs input").forEach(i=>{ if(c.stress[i.dataset.k]!==undefined) i.value=c.stress[i.dataset.k]; });
+  STRESS_RATES=c.stressRates||null;
+  deterministic(); slCalc(); beRender(); calcRestore(); readRender(); insights();
+  SAVED_AT=o.savedAt?new Date(o.savedAt):null; DIRTY=false; showSave();
+  if(o.ranMC) $("#run").click();
+ }catch(e){ console.error(e); RESTORING=false; return false; }
+ RESTORING=false; return true; }
+(async()=>{ const st=await getStore(); if(!st) return; try{ const o=await st.get(); if(o&&o.rows&&!D){ await restoreState(o); setStatus($("#loadStatus").innerHTML+"<br>Se restauró lo guardado el "+fmtDT(new Date(o.savedAt)),$("#loadStatus").className.replace("status","").trim()); } }catch(e){} })();
+document.addEventListener("input",e=>{ if(e.target.closest("aside,main")) markDirty(); },true);
+document.addEventListener("change",e=>{ if(e.target.closest("aside,main")&&e.target.id!=="file") markDirty(); },true);
+$("#btnSave").addEventListener("click",doSave);
+document.addEventListener("keydown",e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){ e.preventDefault(); doSave(); } });
+window.addEventListener("beforeunload",e=>{ if(DIRTY){ e.preventDefault(); e.returnValue=""; } });
+
+// ---------- PDF ----------
+function loadScript(src){ return new Promise((ok,ko)=>{ if(document.querySelector(`script[src="${src}"]`)) return ok(); const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>ko(new Error("No se pudo cargar "+src)); document.head.appendChild(s); }); }
+const pdfMenu=$("#pdfMenu");
+$("#btnPdf").addEventListener("click",()=>{ const open=pdfMenu.hidden; pdfMenu.hidden=!open; $("#btnPdf").setAttribute("aria-expanded",String(open)); });
+document.addEventListener("click",e=>{ if(!e.target.closest(".pdfwrap")){ pdfMenu.hidden=true; $("#btnPdf").setAttribute("aria-expanded","false"); } });
+pdfMenu.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ pdfMenu.hidden=true; makePdf(b.dataset.mode); }));
+function resolveVars(html,root){ const cs=getComputedStyle(root); return html.replace(/var\(--([a-z0-9-]+)\)/gi,(m,n)=>cs.getPropertyValue("--"+n).trim()||"#000"); }
+async function makePdf(mode){ if(!D) return; const btn=$("#btnPdf"), info=$("#saveInfo"); const prevInfo=info.textContent;
+ if(mode==="sim"&&!RES){ info.textContent="Primero corré la simulación para incluirla en el PDF."; info.className="saveinfo dirty"; setTimeout(showSave,4000); return; }
+ btn.disabled=true; btn.textContent="Generando PDF…";
+ try{
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+  const root=document.createElement("div"); root.className="pdfroot"; document.body.appendChild(root);
+  const s=D.s, N=NH(); const now=new Date();
+  const blocks=[];
+  const add=html=>{ const d=document.createElement("div"); d.className="blk"; d.innerHTML=html; root.appendChild(d); blocks.push(d); return d; };
+  add(`<div style="border-bottom:3px solid #12128F;padding-bottom:8px"><div style="font:600 12px Poppins,sans-serif;color:#D9266F">Consultnet · OVOCOR · Fase 4</div><h1>${mode==="sim"?"Conclusiones y simulación Monte Carlo":"Tablero de indicadores y conclusiones (sin simulación)"}</h1>
+   <div class="small">Generado el ${fmtDT(now)} · Archivo: ${LAST_LABEL||"—"} · Escenario del Excel: ${s.SCEN||"—"} · Horizonte: ${N} años · Todo en ${MON()} · ${SAVED_AT?"Último guardado: "+fmtDT(SAVED_AT):"Sin guardar"}</div></div>`);
+  // tablero y conclusiones
+  const tmp=document.createElement("div"); tmp.innerHTML=insights({html:true,noMC:mode!=="sim"});
+  const table=tmp.querySelector("table.dash");
+  if(table){ const title=tmp.querySelector("h3"); add(`<h2>${title?title.textContent:"Tablero de indicadores"}</h2>`); const head=table.tHead.outerHTML; const rows=[...table.tBodies[0].rows];
+   for(let i=0;i<rows.length;i+=5) add(`<table class="dash">${head}<tbody>${rows.slice(i,i+5).map(r=>r.outerHTML).join("")}</tbody></table>`);
+   table.closest(".tablewrap")?.remove(); title?.remove(); }
+  [...tmp.children].forEach(ch=>{ if(ch.classList.contains("ins")){ [...ch.children].forEach(x=>{ if(x.tagName==="OL"||x.tagName==="UL"){ const tag=x.tagName.toLowerCase(); [...x.children].forEach((li,ix)=>add(`<${tag} start="${ix+1}" style="margin:0 0 0 18px">${li.outerHTML}</${tag}>`)); } else add(x.outerHTML); }); } else add(ch.outerHTML); });
+  if(mode==="sim"){
+   add(`<h2>Simulación Monte Carlo · ${fmtN.format(RES.n)} escenarios</h2><div>${$("#heroText").innerHTML}</div>`);
+   add(resolveVars($("#heroChart").innerHTML,root));
+   const st=$("#statsTable table"); if(st){ const head=st.tHead.outerHTML; const rows=[...st.tBodies[0].rows]; for(let i=0;i<rows.length;i+=6) add(`<table>${head}<tbody>${rows.slice(i,i+6).map(r=>r.outerHTML).join("")}</tbody></table>`); }
+   $("#mult").querySelectorAll("figure").forEach(f=>add(resolveVars(`<figure style="margin:0">${f.innerHTML}</figure>`,root)));
+  }
+  add(`<div class="small">Las conclusiones se generan automáticamente con los datos del Excel${mode==="sim"?" y la simulación":""}. Valores en ${MON()}; VAN a valor de hoy (año 0); tasas anuales.</div>`);
+  await new Promise(r=>setTimeout(r,60));
+  const { jsPDF }=window.jspdf; const pdf=new jsPDF({unit:"pt",format:"a4",orientation:"portrait"});
+  const PW=pdf.internal.pageSize.getWidth(), PH=pdf.internal.pageSize.getHeight(), M=28, W=PW-2*M; let y=M; let page=1;
+  const foot=()=>{ pdf.setFontSize(8); pdf.setTextColor(120); pdf.text(`OVOCOR Fase 4 · ${fmtDT(now)} · página ${page}`,M,PH-14); };
+  for(const b of blocks){ const cv=await html2canvas(b,{scale:2,backgroundColor:"#ffffff",logging:false}); const h=cv.height*W/cv.width;
+   if(h<=PH-2*M){ if(y+h>PH-M){ foot(); pdf.addPage(); page++; y=M; } pdf.addImage(cv.toDataURL("image/jpeg",0.92),"JPEG",M,y,W,h); y+=h+2; }
+   else { const sliceH=Math.floor((PH-2*M)*cv.width/W); for(let sy=0;sy<cv.height;sy+=sliceH){ const c2=document.createElement("canvas"); c2.width=cv.width; c2.height=Math.min(sliceH,cv.height-sy); c2.getContext("2d").drawImage(cv,0,sy,cv.width,c2.height,0,0,cv.width,c2.height); const h2=c2.height*W/cv.width; if(y+h2>PH-M){ foot(); pdf.addPage(); page++; y=M; } pdf.addImage(c2.toDataURL("image/jpeg",0.92),"JPEG",M,y,W,h2); y+=h2+2; } } }
+  foot(); root.remove();
+  const blob=pdf.output("blob"); window.__lastPdf={mode,size:blob.size,pages:page};
+  const fname=`OVOCOR_${mode==="sim"?"conclusiones_y_simulacion":"tablero_sin_simulacion"}_${now.toISOString().slice(0,10)}.pdf`;
+  let dl=null; try{ dl=window.claude&&window.claude.use?await window.claude.use("downloads"):null; }catch(e){}
+  if(dl){ try{ await dl.save({filename:fname,data:blob}); info.textContent="PDF listo."; }catch(e){ info.textContent=e&&e.code==="declined"?"Descarga cancelada.":"No se pudo descargar el PDF en esta vista."; } }
+  else { const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},2000); info.textContent="PDF generado."; }
+  info.className="saveinfo"; setTimeout(showSave,4000);
+ }catch(e){ console.error(e); info.textContent="No se pudo generar el PDF: "+(e&&e.message?e.message:"error"); info.className="saveinfo dirty"; setTimeout(showSave,6000); }
+ finally{ btn.disabled=false; btn.textContent="Descargar PDF ▾"; document.querySelectorAll(".pdfroot").forEach(x=>x.remove()); } }
+
+</script>
+</body>
+</html>
