@@ -136,6 +136,13 @@ header.top{padding-right:min(460px,40vw)}
 .pdfroot .blk{padding:6px 24px;background:#fff}
 .pdfroot h1{font-size:22px;color:#12128F}.pdfroot h2{font-size:17px;margin:4px 0}.pdfroot h3{font-size:15px;margin:6px 0 4px}
 .pdfroot table{font-size:12px}.pdfroot .small,.pdfroot .unit{font-size:11px}
+
+.rcwrap{position:relative;margin-top:4px;max-width:900px}
+.rcwrap svg{touch-action:pan-y;cursor:crosshair}
+.rcwrap svg:focus-visible{outline:3px solid var(--magenta);outline-offset:2px}
+.rctip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:.82rem;box-shadow:0 4px 14px rgba(18,18,80,.16);white-space:nowrap;z-index:5}
+.rctip i,.rclegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.rclegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;color:var(--muted);margin-top:2px}
 .note{border-left:4px solid var(--navy);padding:6px 12px;background:var(--navy-soft);border-radius:0 6px 6px 0;margin:10px 0;font-size:.92rem}
 </style>
 </head>
@@ -192,6 +199,11 @@ header.top{padding-right:min(460px,40vw)}
   <h2>Sensibilidad con deslizadores</h2>
   <p class="small">Mové ingresos, egresos y tasas y mirá cómo cambian los indicadores al instante. Todo en dólares: las tasas son tasas en USD (bono del Tesoro de EE.UU. + riesgo país Argentina + prima del proyecto).</p>
   <div id="slideBox"><div class="empty">Cargá los datos para usar los deslizadores.</div></div>
+ </section>
+
+ <section class="card" id="secRate">
+  <h2>Sensibilidad a la tasa: TIR y VAN</h2>
+  <div id="rcBox"><div class="empty">Cargá los datos para ver la sensibilidad a la tasa.</div></div>
  </section>
  <section class="card" id="secBE">
   <h2>Punto mínimo y punto de equilibrio</h2>
@@ -300,7 +312,7 @@ function evaluate(D,f,opt){
   const WU=(!RT&&num(s.WACCOVR)>0)?num(s.WACCOVR)+num(s.MRATE)+dr:WN;
   const real=num(s.REALF)===1, inf=num(s.INFUSD);
   const conv=x=>real?(1+x)/(1+inf)-1:x;
-  const r=conv(WU), ke=conv(KEN), reinv=num(s.REINVIN)>0?conv(num(s.REINVIN)):r;
+  const r=(f.waccForce!==undefined&&f.waccForce!==null)?f.waccForce:conv(WU), ke=conv(KEN), reinv=num(s.REINVIN)>0?conv(num(s.REINVIN)):r;
   const res={fcf:FCF};
   res.van=npv(r,FCF); { let sg=0; for(let t=1;t<=N&&t<T_;t++){ if(FCF[t-1]*FCF[t]<0) sg++; } res.signs=sg; let c=0,best=-Infinity,bk=0; for(let t=0;t<=N&&t<T_;t++){ c+=FCF[t]/Math.pow(1+r,t); if(c>best){best=c;bk=t;} } res.dcmax=best; res.dcmaxYear=bk; } res.tir=irr(FCF); res.tirm=mirr(FCF,r,reinv,N);
   res.pbs=INV0===0?null:payback(FCF);
@@ -694,6 +706,7 @@ function slInit(){ if(!D) return; const s=D.s;
  $("#slToStress").addEventListener("click",slToStress);
  slCalc(); }
 function fmtU(v,d){ if(d.u==="pb") return fmtN.format(v)+" pb"; if(d.abs) return fmt2.format(v)+"%"; return (v>0?"+":"")+fmt1.format(v)+"%"; }
+let rcPending=false; function rcSched(){ if(rcPending) return; rcPending=true; requestAnimationFrame(()=>{ rcPending=false; rateCharts(); }); }
 let slPending=false; function slSched(){ if(slPending) return; slPending=true; requestAnimationFrame(()=>{slPending=false; slCalc();}); }
 function slVals(){ const o={}; document.querySelectorAll("#slideBox input[type=range]").forEach(i=>o[i.dataset.k]=+i.value); return o; }
 function slFactors(v){ const f=ENG.baseFactors(); for(let p=0;p<f.price.length;p++) f.price[p]=1+v.PRECIO/100; f.vol=1+v.VOL/100; f.huevo=1+v.HUEVO/100; f.otros=1+v.OTROS/100; f.fijos=1+v.FIJOS/100; f.capex=Math.max(0.01,1+v.CAPEX/100);
@@ -712,7 +725,7 @@ function slCalc(){ if(!D) return; const v=slVals(); for(const d of SDEF){ const 
  $("#slTable").innerHTML=t+"</tbody></table>";
  $("#slChart").innerHTML=fcfChart(base.fcf,sim.fcf,ENG.num(D.s.N));
  if($("#beYear").options.length) beRender();
- insSched();
+ insSched(); rcSched();
 }
 function fcfChart(a,b,N){ const W=520,H=260,ml=74,mr=10,mt=24,mb=30; const n=N+1; let lo=0,hi=0; for(let t=0;t<n;t++){lo=Math.min(lo,a[t],b[t]);hi=Math.max(hi,a[t],b[t]);} if(hi===lo)hi=lo+1;
  const Y=scaleLin(lo,hi,H-mb,mt), bw=(W-ml-mr)/n; let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Flujo libre por año, caso base y con deslizadores">`;
@@ -934,6 +947,74 @@ function insights(opt){ opt=opt||{}; if(!D) return; const s=D.s, N=NH(), M=MON()
  h+=`<h3>Recomendaciones</h3><ol>${rec.map(r=>`<li>${r}</li>`).join("")}</ol></div>`;
  if(opt.html) return h; $("#insBox").innerHTML=h; }
 
+
+// ---------- sensibilidad a la tasa: TIR, TIR modificada y VAN ----------
+const RC={};
+function rcSeries(){ if(!D||!SB||!$("#slideBox input[type=range]")) return null; const v=slVals(); const fb=slFactors(v); const ry=+$("#beYear").value||undefined;
+ const opt=Object.assign({},OPT,{refYear:ry}); const cur=ENG.evaluate(D,fb,opt);
+ const X=[]; for(let i=0;i<=120;i++) X.push(i*0.005);
+ const c1={wacc:[],tirm:[],van:[]}, c2={tirm:[],van:[]};
+ for(const x of X){ const f1=Object.assign({},fb,{rates:Object.assign({},fb.rates,{rf:x,rp:0,prima:0})}); const r1=ENG.evaluate(D,f1,opt); c1.wacc.push(r1.r); c1.tirm.push(r1.tirm); c1.van.push(r1.van);
+  const f2=Object.assign({},fb,{waccForce:x}); const r2=ENG.evaluate(D,f2,opt); c2.tirm.push(r2.tirm); c2.van.push(r2.van); }
+ const x0=v.RF/100+v.RP/10000+v.PRIMA/100;
+ // tasa compuesta máxima: WACC(x) = TIR  (equivale a VAN = 0)
+ let xmax=null; const tir=cur.tir;
+ if(tir!==null){ const g=x=>{ const f=Object.assign({},fb,{rates:Object.assign({},fb.rates,{rf:x,rp:0,prima:0})}); return ENG.evaluate(D,f,opt).van; };
+  for(let i=1;i<X.length;i++){ if(c1.van[i-1]*c1.van[i]<=0&&c1.van[i-1]!==c1.van[i]){ let a=X[i-1],b=X[i],fa=c1.van[i-1]; for(let k=0;k<50;k++){ const m=(a+b)/2,fm=g(m); if(fa*fm<=0) b=m; else {a=m;fa=fm;} } xmax=(a+b)/2; break; } } }
+ return {X,c1,c2,cur,x0,xmax,tir,signs:cur.signs}; }
+function lineChart(id,X,series,o){ const W=760,H=300,ml=84,mr=16,mt=24,mb=40; let lo=Infinity,hi=-Infinity;
+ for(const s of series) for(const v of s.vals) if(v!==null&&isFinite(v)){ lo=Math.min(lo,v); hi=Math.max(hi,v); }
+ if(o.clip){ lo=Math.max(lo,o.clip[0]); hi=Math.min(hi,o.clip[1]); } if(o.zero){ lo=Math.min(lo,0); hi=Math.max(hi,0); } if(!isFinite(lo)){lo=0;hi=1;} if(hi-lo<1e-9){hi=lo+1;} const pad=(hi-lo)*0.06; lo-=pad; hi+=pad;
+ const Xs=scaleLin(X[0],X[X.length-1],ml,W-mr), Ys=scaleLin(lo,hi,H-mb,mt); RC[id]={X,series,o,Xs,Ys,W,H,ml,mr,mt,mb};
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria}" tabindex="0" data-rc="${id}">`;
+ for(const t of ticks(lo,hi,5)) s+=`<line x1="${ml}" x2="${W-mr}" y1="${Ys(t)}" y2="${Ys(t)}" stroke="var(--grid)"/><text x="${ml-6}" y="${Ys(t)+4}" text-anchor="end">${o.yf(t)}</text>`;
+ for(const t of ticks(X[0],X[X.length-1],6)) s+=`<line x1="${Xs(t)}" x2="${Xs(t)}" y1="${mt}" y2="${H-mb}" stroke="var(--grid)"/><text x="${Xs(t)}" y="${H-mb+16}" text-anchor="middle">${fmt1.format(t*100)}%</text>`;
+ s+=`<text x="${(ml+W-mr)/2}" y="${H-6}" text-anchor="middle" style="fill:var(--ink)">${o.xlabel}</text>`;
+ if(o.zero&&lo<0&&hi>0) s+=`<line x1="${ml}" x2="${W-mr}" y1="${Ys(0)}" y2="${Ys(0)}" stroke="var(--muted)"/>`;
+ for(const m of (o.marks||[])){ if(m.x===null||!isFinite(m.x)||m.x<X[0]||m.x>X[X.length-1]) continue; s+=`<line x1="${Xs(m.x)}" x2="${Xs(m.x)}" y1="${mt-8}" y2="${H-mb}" stroke="${m.c}" stroke-width="1.5" stroke-dasharray="${m.dash||"5 4"}"/><text x="${Xs(m.x)+(m.anchor==="end"?-4:4)}" y="${mt-10+(m.dy||0)}" text-anchor="${m.anchor||"start"}" style="fill:${m.c};font-weight:600">${m.label}</text>`; }
+ for(const se of series){ let d=""; se.vals.forEach((v,i)=>{ if(v===null||!isFinite(v)){ d+=" "; return; } const y=Math.min(H-mb,Math.max(mt,Ys(v))); d+=(d===""||d.endsWith(" ")?"M":"L")+Xs(X[i]).toFixed(1)+","+y.toFixed(1); }); s+=`<path d="${d.replace(/ M/g,"M").trim()}" fill="none" stroke="${se.c}" stroke-width="${se.w||2.5}" ${se.dash?`stroke-dasharray="${se.dash}"`:""}/>`; }
+ for(const pt of (o.points||[])){ if(pt.x===null||!isFinite(pt.x)||pt.y===null||!isFinite(pt.y)) continue; s+=`<circle cx="${Xs(pt.x)}" cy="${Ys(pt.y)}" r="5.5" fill="${pt.c}"/><text x="${Xs(pt.x)+8}" y="${Ys(pt.y)-8}" style="fill:${pt.c};font-weight:600">${pt.label}</text>`; }
+ s+=`<g class="rcguide" visibility="hidden"><line y1="${mt}" y2="${H-mb}" stroke="var(--ink)" stroke-width="1"/>${series.map(()=>`<circle r="4.5" fill="var(--surface)" stroke-width="2.5"/>`).join("")}</g>`;
+ s+=`<rect x="${ml}" y="${mt}" width="${W-ml-mr}" height="${H-mt-mb}" fill="transparent" class="rchit"/></svg>`;
+ let lg=`<div class="rclegend">`+series.map(se=>`<span><i style="background:${se.c};${se.dash?"opacity:.75":""}"></i>${se.name}</span>`).join("")+`</div>`;
+ return `<div class="rcwrap" id="${id}">${s}<div class="rctip" hidden></div>${lg}</div>`; }
+function rcHover(id,i){ const c=RC[id]; if(!c) return; const wrap=document.getElementById(id); if(!wrap) return; const svg=wrap.querySelector("svg"), tip=wrap.querySelector(".rctip"), g=svg.querySelector(".rcguide");
+ if(i===null){ g.setAttribute("visibility","hidden"); tip.hidden=true; return; }
+ i=Math.max(0,Math.min(c.X.length-1,i)); c.idx=i; const x=c.X[i], px=c.Xs(x); g.setAttribute("visibility","visible"); const ln=g.querySelector("line"); ln.setAttribute("x1",px); ln.setAttribute("x2",px);
+ const dots=g.querySelectorAll("circle"); c.series.forEach((se,k)=>{ const v=se.vals[i]; if(v===null||!isFinite(v)){ dots[k].setAttribute("visibility","hidden"); return; } dots[k].setAttribute("visibility","visible"); dots[k].setAttribute("cx",px); dots[k].setAttribute("cy",Math.min(c.H-c.mb,Math.max(c.mt,c.Ys(v)))); dots[k].setAttribute("stroke",se.c); });
+ tip.innerHTML=`<b>${c.o.xname}: ${fmt2.format(x*100)}%</b>`+c.series.map(se=>`<div><i style="background:${se.c}"></i>${se.name}: <b>${se.vals[i]===null||!isFinite(se.vals[i])?"n/d":c.o.tf(se.vals[i])}</b></div>`).join("")+(c.o.extra?c.o.extra(i):"");
+ tip.hidden=false; const r=svg.getBoundingClientRect(), wr=wrap.getBoundingClientRect(); const left=(px/c.W)*r.width+(r.left-wr.left); tip.style.left=Math.min(wr.width-tip.offsetWidth-4,Math.max(4,left+12))+"px"; tip.style.top="8px"; }
+function rcBind(){ document.querySelectorAll("#rcBox .rcwrap").forEach(w=>{ const id=w.id, svg=w.querySelector("svg"); const c=RC[id];
+ const toIdx=e=>{ const r=svg.getBoundingClientRect(); const xv=(e.clientX-r.left)/r.width*c.W; const val=X0=>X0; let best=0,bd=Infinity; c.X.forEach((x,i)=>{ const d=Math.abs(c.Xs(x)-xv); if(d<bd){bd=d;best=i;} }); return best; };
+ svg.addEventListener("pointermove",e=>rcHover(id,toIdx(e))); svg.addEventListener("pointerdown",e=>rcHover(id,toIdx(e)));
+ svg.addEventListener("pointerleave",()=>rcHover(id,null));
+ svg.addEventListener("keydown",e=>{ if(e.key==="ArrowRight"||e.key==="ArrowLeft"){ e.preventDefault(); const i=(c.idx??0)+(e.key==="ArrowRight"?1:-1); rcHover(id,i); } });
+ svg.addEventListener("focus",()=>rcHover(id,c.idx??0)); svg.addEventListener("blur",()=>rcHover(id,null)); }); }
+function rateCharts(){ const box=$("#rcBox"); if(!box) return; const R=rcSeries(); if(!R){ box.innerHTML='<div class="empty">Cargá los datos para ver la sensibilidad a la tasa.</div>'; return; }
+ const {X,c1,c2,cur,x0,xmax,tir}=R; if(!(cur.inv0>0)||!D.products.some(p=>p.active)){ box.innerHTML='<div class="empty">El Excel no tiene inversión o ventas cargadas: no hay flujo para graficar.</div>'; return; } const tirL=X.map(()=>tir), diag=X.slice();
+ const pctf=v=>fmt2.format(v*100)+"%";
+ let h=`<p class="small">La TIR es una propiedad del flujo de fondos: no cambia con la tasa de descuento, por eso su línea es horizontal. Lo que cambia con la tasa es la TIR modificada y el VAN. El punto donde la tasa iguala a la TIR es la tasa máxima que soporta el proyecto (VAN = 0). Los gráficos usan los valores actuales de los deslizadores; pasá el cursor (o tocá, en el celular) sobre las líneas para ver cada combinación; también se puede recorrer con las flechas del teclado.</p>`;
+ if(tir===null) h+=`<div class="note">El flujo no cambia de signo: no hay TIR que graficar. Se muestran la TIR modificada y el VAN.</div>`;
+ if(R.signs>1) h+=`<div class="note">El flujo cambia de signo ${R.signs} veces: la TIR puede no ser única. Para decidir, usar el VAN y la TIR modificada.</div>`;
+ const xw=xmax; const wAtMax=xw===null?null:(()=>{ const f=Object.assign({},slFactors(slVals()),{rates:Object.assign({},slFactors(slVals()).rates,{rf:xw,rp:0,prima:0})}); return ENG.evaluate(D,f,OPT).r; })();
+ h+=`<div><h3>1. TIR frente a la tasa compuesta (tasa libre de riesgo + riesgo país + prima)</h3>`+
+  lineChart("rc1",X,[{name:"TIR del proyecto",c:"var(--navy)",vals:tirL},{name:"TIR modificada",c:"var(--teal)",vals:c1.tirm},{name:"WACC resultante",c:"var(--magenta)",vals:c1.wacc,dash:"6 4"}],
+   {aria:"TIR en función de la tasa compuesta",xlabel:"Tasa compuesta anual en USD",xname:"Tasa compuesta",yf:v=>fmt1.format(v*100)+"%",tf:pctf,clip:[-0.3,1],
+    marks:[{x:x0,label:`Actual ${pctf(x0)}`,c:"var(--ink)"},{x:xw,label:xw===null?"":`Máxima ${pctf(xw)}`,c:"var(--magenta)",anchor:"end",dy:14}],points:xw===null?[]:[{x:xw,y:tir,label:"WACC = TIR",c:"var(--magenta)"}],
+    extra:i=>`<div class="small">VAN: ${usd(c1.van[i])}</div>`})+
+  `<p class="small">${xw===null?(tir===null?"":`Con tasas de hasta 60% el WACC no alcanza la TIR (${pc(tir)}): el VAN es positivo en todo el rango.`):`Con las condiciones actuales, la tasa compuesta puede subir hasta <b>${pctf(xw)}</b> (WACC ${pc(wAtMax)}) antes de que el VAN llegue a cero. Hoy está en ${pctf(x0)}.`}</p></div>`;
+ h+=`<div style="margin-top:14px"><h3>2. TIR frente al WACC (costo promedio ponderado del capital, con la deuda)</h3>`+
+  lineChart("rc2",X,[{name:"TIR del proyecto",c:"var(--navy)",vals:tirL},{name:"TIR modificada",c:"var(--teal)",vals:c2.tirm},{name:"WACC (línea de igualdad)",c:"var(--magenta)",vals:diag,dash:"6 4"}],
+   {aria:"TIR en función del WACC",xlabel:"WACC anual en USD",xname:"WACC",yf:v=>fmt1.format(v*100)+"%",tf:pctf,clip:[-0.3,1],
+    marks:[{x:cur.r,label:`Actual ${pctf(cur.r)}`,c:"var(--ink)"}],points:tir!==null&&tir>=0&&tir<=0.6?[{x:tir,y:tir,label:"WACC = TIR",c:"var(--magenta)"}]:[],
+    extra:i=>`<div class="small">VAN: ${usd(c2.van[i])}</div>`})+
+  `<p class="small">${tir===null?"":`El proyecto crea valor mientras el WACC sea menor que la TIR (${pc(tir)}). Con el WACC actual de ${pc(cur.r)}, el margen es de ${pp(Math.abs(tir-cur.r)).replace("+","")} ${tir>cur.r?"a favor":"en contra"}.`}</p></div>`;
+ h+=`<h3 style="margin-top:14px">3. VAN frente a la tasa compuesta</h3>`+lineChart("rc3",X,[{name:"VAN del proyecto",c:"var(--navy)",vals:c1.van}],
+   {aria:"VAN en función de la tasa compuesta",xlabel:"Tasa compuesta anual en USD (tasa libre de riesgo + riesgo país + prima)",xname:"Tasa compuesta",yf:usdc,tf:usd,zero:true,
+    marks:[{x:x0,label:`Actual ${pctf(x0)}`,c:"var(--ink)"},{x:xw,label:xw===null?"":`VAN = 0 en ${pctf(xw)}`,c:"var(--magenta)",anchor:"end",dy:14}],
+    points:[{x:x0,y:cur.van,label:usd(cur.van),c:"var(--ink)"}],extra:i=>`<div class="small">WACC: ${pctf(c1.wacc[i])}</div>`})+
+  `<p class="small">Valor de hoy de los ${NH()} años, en ${MON()}. ${xw===null?"":`Por encima de una tasa compuesta de ${pctf(xw)} el proyecto destruye valor.`}</p>`;
+ box.innerHTML=h; rcBind(); }
 
 updateRunLabel();
 // ---------- guardar y restaurar ----------
