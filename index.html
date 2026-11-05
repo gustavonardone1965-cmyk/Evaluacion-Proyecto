@@ -143,6 +143,12 @@ header.top{padding-right:min(460px,40vw)}
 .rctip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:.82rem;box-shadow:0 4px 14px rgba(18,18,80,.16);white-space:nowrap;z-index:5}
 .rctip i,.rclegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .rclegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;color:var(--muted);margin-top:2px}
+
+.vmwrap{position:relative;max-width:900px;margin:8px 0}
+.vmwrap svg{touch-action:pan-y;cursor:crosshair}
+.vmwrap svg:focus-visible{outline:3px solid var(--magenta);outline-offset:2px}
+.vmins{max-width:85ch}
+.vmins li{margin:.4rem 0}
 .note{border-left:4px solid var(--navy);padding:6px 12px;background:var(--navy-soft);border-radius:0 6px 6px 0;margin:10px 0;font-size:.92rem}
 </style>
 </head>
@@ -204,6 +210,12 @@ header.top{padding-right:min(460px,40vw)}
  <section class="card" id="secRate">
   <h2>Sensibilidad a la tasa: TIR y VAN</h2>
   <div id="rcBox"><div class="empty">Cargá los datos para ver la sensibilidad a la tasa.</div></div>
+ </section>
+
+ <section class="card" id="secMap">
+  <h2>Mapa del VAN: tasa compuesta y precio mix</h2>
+  <p class="small">Muestra en un solo gráfico cómo se combinan las dos variables que más mueven el resultado: la tasa de interés (que define el costo del capital) y el precio de venta.</p>
+  <div id="vmBox"><div class="empty">Cargá los datos para ver el mapa.</div></div>
  </section>
  <section class="card" id="secBE">
   <h2>Punto mínimo y punto de equilibrio</h2>
@@ -725,7 +737,7 @@ function slCalc(){ if(!D) return; const v=slVals(); for(const d of SDEF){ const 
  $("#slTable").innerHTML=t+"</tbody></table>";
  $("#slChart").innerHTML=fcfChart(base.fcf,sim.fcf,ENG.num(D.s.N));
  if($("#beYear").options.length) beRender();
- insSched(); rcSched();
+ insSched(); rcSched(); vmSched();
 }
 function fcfChart(a,b,N){ const W=520,H=260,ml=74,mr=10,mt=24,mb=30; const n=N+1; let lo=0,hi=0; for(let t=0;t<n;t++){lo=Math.min(lo,a[t],b[t]);hi=Math.max(hi,a[t],b[t]);} if(hi===lo)hi=lo+1;
  const Y=scaleLin(lo,hi,H-mb,mt), bw=(W-ml-mr)/n; let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Flujo libre por año, caso base y con deslizadores">`;
@@ -962,13 +974,13 @@ function rcSeries(){ if(!D||!SB||!$("#slideBox input[type=range]")) return null;
  if(tir!==null){ const g=x=>{ const f=Object.assign({},fb,{rates:Object.assign({},fb.rates,{rf:x,rp:0,prima:0})}); return ENG.evaluate(D,f,opt).van; };
   for(let i=1;i<X.length;i++){ if(c1.van[i-1]*c1.van[i]<=0&&c1.van[i-1]!==c1.van[i]){ let a=X[i-1],b=X[i],fa=c1.van[i-1]; for(let k=0;k<50;k++){ const m=(a+b)/2,fm=g(m); if(fa*fm<=0) b=m; else {a=m;fa=fm;} } xmax=(a+b)/2; break; } } }
  return {X,c1,c2,cur,x0,xmax,tir,signs:cur.signs}; }
-function lineChart(id,X,series,o){ const W=760,H=300,ml=84,mr=16,mt=24,mb=40; let lo=Infinity,hi=-Infinity;
+function lineChart(id,X,series,o){ const narrow=(($("#rcBox")||{}).clientWidth||800)<600; const W=narrow?470:760,H=narrow?320:300,ml=narrow?62:84,mr=16,mt=24,mb=40; let lo=Infinity,hi=-Infinity;
  for(const s of series) for(const v of s.vals) if(v!==null&&isFinite(v)){ lo=Math.min(lo,v); hi=Math.max(hi,v); }
  if(o.clip){ lo=Math.max(lo,o.clip[0]); hi=Math.min(hi,o.clip[1]); } if(o.zero){ lo=Math.min(lo,0); hi=Math.max(hi,0); } if(!isFinite(lo)){lo=0;hi=1;} if(hi-lo<1e-9){hi=lo+1;} const pad=(hi-lo)*0.06; lo-=pad; hi+=pad;
  const Xs=scaleLin(X[0],X[X.length-1],ml,W-mr), Ys=scaleLin(lo,hi,H-mb,mt); RC[id]={X,series,o,Xs,Ys,W,H,ml,mr,mt,mb};
  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria}" tabindex="0" data-rc="${id}">`;
  for(const t of ticks(lo,hi,5)) s+=`<line x1="${ml}" x2="${W-mr}" y1="${Ys(t)}" y2="${Ys(t)}" stroke="var(--grid)"/><text x="${ml-6}" y="${Ys(t)+4}" text-anchor="end">${o.yf(t)}</text>`;
- for(const t of ticks(X[0],X[X.length-1],6)) s+=`<line x1="${Xs(t)}" x2="${Xs(t)}" y1="${mt}" y2="${H-mb}" stroke="var(--grid)"/><text x="${Xs(t)}" y="${H-mb+16}" text-anchor="middle">${fmt1.format(t*100)}%</text>`;
+ for(const t of ticks(X[0],X[X.length-1],narrow?3:6)) s+=`<line x1="${Xs(t)}" x2="${Xs(t)}" y1="${mt}" y2="${H-mb}" stroke="var(--grid)"/><text x="${Xs(t)}" y="${H-mb+16}" text-anchor="middle">${fmt1.format(t*100)}%</text>`;
  s+=`<text x="${(ml+W-mr)/2}" y="${H-6}" text-anchor="middle" style="fill:var(--ink)">${o.xlabel}</text>`;
  if(o.zero&&lo<0&&hi>0) s+=`<line x1="${ml}" x2="${W-mr}" y1="${Ys(0)}" y2="${Ys(0)}" stroke="var(--muted)"/>`;
  for(const m of (o.marks||[])){ if(m.x===null||!isFinite(m.x)||m.x<X[0]||m.x>X[X.length-1]) continue; s+=`<line x1="${Xs(m.x)}" x2="${Xs(m.x)}" y1="${mt-8}" y2="${H-mb}" stroke="${m.c}" stroke-width="1.5" stroke-dasharray="${m.dash||"5 4"}"/><text x="${Xs(m.x)+(m.anchor==="end"?-4:4)}" y="${mt-10+(m.dy||0)}" text-anchor="${m.anchor||"start"}" style="fill:${m.c};font-weight:600">${m.label}</text>`; }
@@ -994,6 +1006,7 @@ function rateCharts(){ const box=$("#rcBox"); if(!box) return; const R=rcSeries(
  const {X,c1,c2,cur,x0,xmax,tir}=R; if(!(cur.inv0>0)||!D.products.some(p=>p.active)){ box.innerHTML='<div class="empty">El Excel no tiene inversión o ventas cargadas: no hay flujo para graficar.</div>'; return; } const tirL=X.map(()=>tir), diag=X.slice();
  const pctf=v=>fmt2.format(v*100)+"%";
  let h=`<p class="small">La TIR es una propiedad del flujo de fondos: no cambia con la tasa de descuento, por eso su línea es horizontal. Lo que cambia con la tasa es la TIR modificada y el VAN. El punto donde la tasa iguala a la TIR es la tasa máxima que soporta el proyecto (VAN = 0). Los gráficos usan los valores actuales de los deslizadores; pasá el cursor (o tocá, en el celular) sobre las líneas para ver cada combinación; también se puede recorrer con las flechas del teclado.</p>`;
+ if(ENG.num(D.s.KEOVR)>0||ENG.num(D.s.WACCOVR)>0) h+=`<div class="note">Atención: el Excel usa una tasa manual (${ENG.num(D.s.KEOVR)>0?"rentabilidad exigida K4 = "+pc(ENG.num(D.s.KEOVR)):"tasa de corte K7 = "+pc(ENG.num(D.s.WACCOVR))}). Estos gráficos arman la tasa como tasa libre de riesgo + riesgo país + prima, por eso el VAN “actual” puede diferir del tablero.</div>`;
  if(tir===null) h+=`<div class="note">El flujo no cambia de signo: no hay TIR que graficar. Se muestran la TIR modificada y el VAN.</div>`;
  if(R.signs>1) h+=`<div class="note">El flujo cambia de signo ${R.signs} veces: la TIR puede no ser única. Para decidir, usar el VAN y la TIR modificada.</div>`;
  const xw=xmax; const wAtMax=xw===null?null:(()=>{ const f=Object.assign({},slFactors(slVals()),{rates:Object.assign({},slFactors(slVals()).rates,{rf:xw,rp:0,prima:0})}); return ENG.evaluate(D,f,OPT).r; })();
@@ -1015,6 +1028,81 @@ function rateCharts(){ const box=$("#rcBox"); if(!box) return; const R=rcSeries(
     points:[{x:x0,y:cur.van,label:usd(cur.van),c:"var(--ink)"}],extra:i=>`<div class="small">WACC: ${pctf(c1.wacc[i])}</div>`})+
   `<p class="small">Valor de hoy de los ${NH()} años, en ${MON()}. ${xw===null?"":`Por encima de una tasa compuesta de ${pctf(xw)} el proyecto destruye valor.`}</p>`;
  box.innerHTML=h; rcBind(); }
+
+// ---------- mapa de curvas de nivel: VAN según tasa compuesta y precio ----------
+const VM={xs:[],ys:[]}; for(let i=0;i<=30;i++) VM.xs.push(+(i*0.02).toFixed(4)); for(let j=0;j<=40;j++) VM.ys.push(+(-0.5+j*0.025).toFixed(4));
+let vmTimer=null; function vmSched(){ clearTimeout(vmTimer); vmTimer=setTimeout(vanMap,160); }
+function vmEval(fb,x,y,opt){ const f=Object.assign({},fb,{price:fb.price.map(()=>Math.max(0.01,1+y)),rates:Object.assign({},fb.rates,{rf:x,rp:0,prima:0})}); return ENG.evaluate(D,f,opt); }
+function vanMap(){ const box=$("#vmBox"); if(!box) return; if(!D||!SB||!$("#slideBox input[type=range]")){ box.innerHTML='<div class="empty">Cargá los datos para ver el mapa.</div>'; return; }
+ const v=slVals(), fb=slFactors(v), opt=Object.assign({},OPT,{refYear:+$("#beYear").value||undefined}); const b0=ENG.evaluate(D,fb,opt);
+ if(!(b0.inv0>0)||!D.products.some(p=>p.active)){ box.innerHTML='<div class="empty">El Excel no tiene inversión o ventas cargadas: no hay flujo para graficar.</div>'; return; }
+ const xs=VM.xs, ys=VM.ys, Z=[], TIRY=[];
+ for(let j=0;j<ys.length;j++){ const row=[]; for(let i=0;i<xs.length;i++) row.push(vmEval(fb,xs[i],ys[j],opt).van); Z.push(row); TIRY.push(vmEval(fb,0.1,ys[j],opt).tir); }
+ VM.Z=Z; VM.TIRY=TIRY;
+ const x0=v.RF/100+v.RP/10000+v.PRIMA/100, y0=v.PRECIO/100; const vanNow=b0.van;
+ const pm=b0.pmix?b0.pmix/(1+y0):null; // precio mix del Excel (sin el cambio del deslizador)
+ // frontera exacta en la tasa actual (precio mínimo) y en el precio actual (tasa máxima)
+ const solveY=(x)=>{ let a=-0.5,bb=0.5,fa=vmEval(fb,x,a,opt).van,fbv=vmEval(fb,x,bb,opt).van; if(fa*fbv>0) return null; for(let k=0;k<60;k++){ const m=(a+bb)/2,fm=vmEval(fb,x,m,opt).van; if(fa*fm<=0) bb=m; else {a=m;fa=fm;} } return (a+bb)/2; };
+ const solveX=(y)=>{ let a=0,bb=0.6,fa=vmEval(fb,a,y,opt).van,fbv=vmEval(fb,bb,y,opt).van; if(fa*fbv>0) return null; for(let k=0;k<60;k++){ const m=(a+bb)/2,fm=vmEval(fb,m,y,opt).van; if(fa*fm<=0) bb=m; else {a=m;fa=fm;} } return (a+bb)/2; };
+ const yMin=solveY(x0), xMax=solveX(y0);
+ const yA=solveY(Math.min(0.6,x0+0.05)), slope=(yMin!==null&&yA!==null)?(yA-yMin)/5:null; // cambio de precio por punto de tasa
+ let pos=0; for(const r of Z) for(const z of r) if(z>0) pos++; const share=pos/(xs.length*ys.length);
+ const vStress=vmEval(fb,Math.min(0.6,x0+0.10),Math.max(-0.5,y0-0.10),opt).van;
+ // dibujo
+ const narrow=(box.clientWidth||800)<600; const W=narrow?480:790,H=narrow?380:430,ml=narrow?52:70,mr=narrow?118:128,mt=24,mb=46; const X=scaleLin(0,0.6,ml,W-mr), Y=scaleLin(-0.5,0.5,H-mb,mt); const cw=(W-ml-mr)/(xs.length-1), ch=(H-mt-mb)/(ys.length-1);
+ let mx=0; for(const r of Z) for(const z of r) mx=Math.max(mx,Math.abs(z)); mx=mx||1;
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Mapa del VAN según la tasa compuesta y el precio mix" tabindex="0">`;
+ for(let j=0;j<ys.length;j++) for(let i=0;i<xs.length;i++){ const z=Z[j][i], a=Math.min(1,Math.pow(Math.abs(z)/mx,0.6))*0.85+0.08;
+  s+=`<rect x="${(X(xs[i])-cw/2).toFixed(1)}" y="${(Y(ys[j])-ch/2).toFixed(1)}" width="${(cw+0.6).toFixed(1)}" height="${(ch+0.6).toFixed(1)}" fill="${z>=0?"var(--teal)":"var(--magenta)"}" fill-opacity="${a.toFixed(3)}"/>`; }
+ // frontera VAN = 0 (cuadrados en marcha)
+ const seg=[]; const ip=(p,q,zp,zq)=>p+(q-p)*(zp/(zp-zq));
+ for(let j=0;j<ys.length-1;j++) for(let i=0;i<xs.length-1;i++){ const z00=Z[j][i],z10=Z[j][i+1],z01=Z[j+1][i],z11=Z[j+1][i+1]; const pts=[];
+  if(z00*z10<0) pts.push([ip(xs[i],xs[i+1],z00,z10),ys[j]]); if(z10*z11<0) pts.push([xs[i+1],ip(ys[j],ys[j+1],z10,z11)]); if(z01*z11<0) pts.push([ip(xs[i],xs[i+1],z01,z11),ys[j+1]]); if(z00*z01<0) pts.push([xs[i],ip(ys[j],ys[j+1],z00,z01)]);
+  if(pts.length>=2) seg.push(pts[0],pts[1]); if(pts.length===4) seg.push(pts[2],pts[3]); }
+ let d=""; for(let k=0;k<seg.length;k+=2) d+=`M${X(seg[k][0]).toFixed(1)},${Y(seg[k][1]).toFixed(1)}L${X(seg[k+1][0]).toFixed(1)},${Y(seg[k+1][1]).toFixed(1)}`;
+ s+=`<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="3"/>`;
+ for(const t of (narrow?[0,0.2,0.4,0.6]:[0,0.1,0.2,0.3,0.4,0.5,0.6])) s+=`<text x="${X(t)}" y="${H-mb+18}" text-anchor="middle">${t*100}%</text>`;
+ for(const t of [-0.5,-0.25,0,0.25,0.5]) s+=`<text x="${ml-8}" y="${Y(t)+4}" text-anchor="end">${t>0?"+":""}${t*100}%</text>`;
+ s+=`<text x="${(ml+W-mr)/2}" y="${H-8}" text-anchor="middle" style="fill:var(--ink)">${narrow?"Tasa compuesta anual (USD)":"Tasa compuesta anual en USD (tasa libre de riesgo + riesgo país + prima)"}</text>`;
+ s+=`<text transform="translate(12,${(mt+H-mb)/2}) rotate(-90)" text-anchor="middle" style="fill:var(--ink)">${narrow?"Cambio del precio mix":"Cambio del precio mix frente al Excel"}</text>`;
+ s+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--surface)" stroke-opacity=".6" stroke-dasharray="3 3"/>`;
+ if(x0<=0.6&&y0>=-0.5&&y0<=0.5) s+=`<circle cx="${X(x0)}" cy="${Y(y0)}" r="8" fill="var(--surface)" stroke="var(--ink)" stroke-width="3"/><text x="${X(x0)+12}" y="${Y(y0)-10}" style="fill:var(--ink);font-weight:700;paint-order:stroke;stroke:var(--surface);stroke-width:4px">Hoy</text>`;
+ // leyenda
+ const lx=W-mr+18; s+=`<text x="${lx}" y="${mt+4}" style="fill:var(--ink);font-weight:600">VAN</text>`;
+ for(let k=0;k<=10;k++){ const zz=mx*(1-k/5); const a=Math.min(1,Math.pow(Math.abs(zz)/mx,0.6))*0.85+0.08; s+=`<rect x="${lx}" y="${mt+12+k*22}" width="18" height="22" fill="${zz>=0?"var(--teal)":"var(--magenta)"}" fill-opacity="${a.toFixed(3)}"/>`; if(k%5===0) s+=`<text x="${lx+24}" y="${mt+27+k*22}">${usdc(zz)}</text>`; }
+ s+=`<line x1="${lx-2}" x2="${lx+20}" y1="${mt+12+5*22+11}" y2="${mt+12+5*22+11}" stroke="var(--ink)" stroke-width="3"/>`;
+ s+=`<g class="vmguide" visibility="hidden"><rect width="${cw+0.6}" height="${ch+0.6}" fill="none" stroke="var(--ink)" stroke-width="2"/></g>`;
+ s+=`<rect x="${ml-cw/2}" y="${mt-ch/2}" width="${W-ml-mr+cw}" height="${H-mt-mb+ch}" fill="transparent" class="vmhit"/></svg>`;
+ VM.geo={W,H,ml,mr,mt,mb,X,Y,cw,ch,pm};
+ const pct=v=>(v>0?"+":"")+fmt1.format(v*100)+"%"; const p2=v=>fmt2.format(v*100)+"%";
+ const zoneNow=vanNow>0?"verde (crea valor)":"rosa (destruye valor)";
+ const manual=ENG.num(D.s.KEOVR)>0||ENG.num(D.s.WACCOVR)>0;
+ let h=(manual?`<div class="note">Atención: el Excel usa una tasa manual (${ENG.num(D.s.KEOVR)>0?"rentabilidad exigida K4 = "+pc(ENG.num(D.s.KEOVR)):"tasa de corte K7 = "+pc(ENG.num(D.s.WACCOVR))}). Este mapa arma la tasa como tasa libre de riesgo + riesgo país + prima, así que el VAN de “Hoy” puede diferir del tablero (${usd(ENG.evaluate(D,ENG.baseFactors(),OPT).van)}).</div>`:"")+`<div class="note"><b>Cómo se lee.</b> Cada punto del mapa es una combinación de dos variables: la <b>tasa compuesta</b> (eje horizontal, de 0% a 60% anual en USD) y el <b>precio mix</b> (eje vertical, de −50% a +50% respecto del Excel). El color es el VAN del proyecto en esa combinación, a valor de hoy y sumando los ${NH()} años: <b>verde</b> crea valor, <b>rosa</b> destruye valor; cuanto más intenso, mayor el monto. La <b>línea negra</b> es la frontera donde el VAN es exactamente cero: todas las combinaciones de esa línea dejan al proyecto justo en el límite. El círculo “Hoy” es la situación actual (Excel y deslizadores). Los demás supuestos (costos, volumen, inversión, deuda) quedan como están en los deslizadores. Pasá el cursor o tocá el mapa para ver el valor de cada combinación.</div>`;
+ h+=`<div class="vmwrap" id="vm">${s}<div class="rctip" hidden></div></div>`;
+ h+=`<h3>Qué muestra con los datos actuales</h3><ol class="vmins">`;
+ h+=`<li><b>Dónde está el proyecto hoy.</b> Con una tasa compuesta de ${p2(x0)} y el precio mix ${y0===0?"del Excel":pct(y0)+" respecto del Excel"}${pm?` (US$ ${fmt2.format(pm*(1+y0))} por kg)`:""}, el punto “Hoy” cae en la zona ${zoneNow}: VAN de <b>${usd(vanNow)}</b>.</li>`;
+ h+=`<li><b>${yMin!==null&&yMin>y0?"Qué precio hace falta.":"Cuánto puede bajar el precio."}</b> ${yMin===null?(vmEval(fb,x0,-0.5,opt).van>0?"Con la tasa actual, el VAN sigue positivo aun con el precio 50% más bajo.":"Con la tasa actual, el VAN es negativo aun con el precio 50% más alto."):(yMin<=y0?`Con la tasa actual, el precio mix puede bajar hasta <b>${pct(yMin)}</b> respecto del Excel${pm?` (US$ ${fmt2.format(pm*(1+yMin))} por kg)`:""} antes de que el VAN sea cero: hoy hay un margen de ${fmt1.format((y0-yMin)*100)} puntos de precio.`:`Con la tasa actual, el precio mix tiene que ser al menos <b>${pct(yMin)}</b> respecto del Excel${pm?` (US$ ${fmt2.format(pm*(1+yMin))} por kg)`:""} para que el VAN llegue a cero: hoy faltan ${fmt1.format((yMin-y0)*100)} puntos de precio.`)}</li>`;
+ h+=`<li><b>${vanNow>0?"Cuánto puede subir la tasa.":"Qué tasa haría falta."}</b> ${xMax===null?(vmEval(fb,0.6,y0,opt).van>0?"Con el precio actual, el VAN sigue positivo aun con una tasa compuesta de 60%.":"Con el precio actual, el VAN es negativo con cualquier tasa del rango."):(xMax>x0?`Con el precio actual, la tasa compuesta puede subir hasta <b>${p2(xMax)}</b> antes de que el VAN llegue a cero (hoy está en ${p2(x0)}: hay ${fmt1.format((xMax-x0)*100)} puntos de margen).`:`Con el precio actual, la tasa compuesta tendría que bajar a <b>${p2(xMax)}</b> o menos para que el VAN llegue a cero (hoy está en ${p2(x0)}).`)}</li>`;
+ if(slope!==null) h+=`<li><b>Cuánto precio compensa la tasa.</b> Sobre la frontera, cada punto que sube la tasa compuesta exige un precio mix ${fmt2.format(Math.abs(slope)*100)}% ${slope>0?"más alto":"más bajo"} para que el proyecto siga en VAN cero. Sirve para negociar: si el riesgo país sube, este es el ajuste de precio que lo compensa.</li>`;
+ h+=`<li><b>Qué tan amplia es la zona segura.</b> En <b>${pc(share)}</b> de las combinaciones del mapa el proyecto crea valor. Una situación combinada adversa, con la tasa compuesta 10 puntos más alta y el precio 10% más bajo que hoy, daría un VAN de <b>${usd(vStress)}</b>.</li>`;
+ h+=`</ol>`;
+ const dist=(xMax!==null?(xMax-x0):0.6-x0); let concl;
+ if(vanNow<=0) concl=`Hoy el proyecto está del lado rosa: con estos supuestos destruye valor. Para cruzar la frontera hace falta ${yMin!==null?`un precio mix de al menos ${pct(yMin)} respecto del Excel con la tasa actual`:"mejorar el precio o bajar la tasa"}, o reducir costos e inversión (ver Puntos de quiebre).`;
+ else if((yMin!==null&&y0-yMin<0.10)||dist<0.05) concl=`El proyecto crea valor, pero el punto “Hoy” está cerca de la frontera: una caída de precio de ${yMin!==null?fmt1.format((y0-yMin)*100)+" puntos":"pocos puntos"} o una suba de tasa de ${fmt1.format(dist*100)} puntos lo llevan a VAN cero. Conviene asegurar el precio con contratos y fijar la tasa antes de invertir.`;
+ else concl=`El proyecto crea valor con un margen razonable: el punto “Hoy” está lejos de la frontera, tanto en precio (${yMin!==null?fmt1.format((y0-yMin)*100)+" puntos":"más de 50 puntos"}) como en tasa (${fmt1.format(dist*100)} puntos). Aun así, el precio sigue siendo la variable a vigilar.`;
+ h+=`<div class="note"><b>Conclusión.</b> ${concl}</div>`;
+ box.innerHTML=h; vmBind(); }
+function vmBind(){ const wrap=$("#vm"); if(!wrap) return; const svg=wrap.querySelector("svg"), tip=wrap.querySelector(".rctip"), g=svg.querySelector(".vmguide"), G=VM.geo; let cur=null;
+ const show=(i,j)=>{ i=Math.max(0,Math.min(VM.xs.length-1,i)); j=Math.max(0,Math.min(VM.ys.length-1,j)); cur=[i,j]; const x=VM.xs[i], y=VM.ys[j], z=VM.Z[j][i];
+  g.setAttribute("visibility","visible"); const r=g.querySelector("rect"); r.setAttribute("x",G.X(x)-G.cw/2); r.setAttribute("y",G.Y(y)-G.ch/2);
+  tip.innerHTML=`<b>Tasa compuesta ${fmt1.format(x*100)}% · precio ${y>0?"+":""}${fmt1.format(y*100)}%</b>${G.pm?`<div>Precio mix: US$ ${fmt2.format(G.pm*(1+y))} por kg</div>`:""}<div>VAN: <b>${usd(z)}</b> (${z>0?"crea valor":"destruye valor"})</div><div class="small">TIR con ese precio: ${pc(VM.TIRY[j])}</div>`;
+  tip.hidden=false; const sr=svg.getBoundingClientRect(), wr=wrap.getBoundingClientRect(); const px=G.X(x)/G.W*sr.width+(sr.left-wr.left), py=G.Y(y)/G.H*sr.height+(sr.top-wr.top);
+  tip.style.left=Math.min(wr.width-tip.offsetWidth-4,Math.max(4,px+14))+"px"; tip.style.top=Math.max(4,py-tip.offsetHeight-12)+"px"; };
+ const fromEv=e=>{ const r=svg.getBoundingClientRect(); const xv=(e.clientX-r.left)/r.width*G.W, yv=(e.clientY-r.top)/r.height*G.H; return [Math.round((xv-G.ml)/G.cw), Math.round((G.H-G.mb-yv)/G.ch)]; };
+ svg.addEventListener("pointermove",e=>show(...fromEv(e))); svg.addEventListener("pointerdown",e=>show(...fromEv(e)));
+ svg.addEventListener("pointerleave",()=>{ g.setAttribute("visibility","hidden"); tip.hidden=true; });
+ svg.addEventListener("keydown",e=>{ const [i,j]=cur||[Math.round((VM.xs.length-1)/2),20]; const m={ArrowRight:[1,0],ArrowLeft:[-1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key]; if(m){ e.preventDefault(); show(i+m[0],j+m[1]); } });
+ svg.addEventListener("focus",()=>show(...(cur||[15,20]))); svg.addEventListener("blur",()=>{ g.setAttribute("visibility","hidden"); tip.hidden=true; }); }
 
 updateRunLabel();
 // ---------- guardar y restaurar ----------
@@ -1103,7 +1191,7 @@ async function makePdf(mode){ if(!D) return; const btn=$("#btnPdf"), info=$("#sa
   const { jsPDF }=window.jspdf; const pdf=new jsPDF({unit:"pt",format:"a4",orientation:"portrait"});
   const PW=pdf.internal.pageSize.getWidth(), PH=pdf.internal.pageSize.getHeight(), M=28, W=PW-2*M; let y=M; let page=1;
   const foot=()=>{ pdf.setFontSize(8); pdf.setTextColor(120); pdf.text(`OVOCOR Fase 4 · ${fmtDT(now)} · página ${page}`,M,PH-14); };
-  for(const b of blocks){ const cv=await html2canvas(b,{scale:2,backgroundColor:"#ffffff",logging:false}); const h=cv.height*W/cv.width;
+  for(const b of blocks){ const cv=await html2canvas(b,{scale:1.7,backgroundColor:"#ffffff",logging:false,ignoreElements:el=>el.tagName==="MAIN"||el.tagName==="ASIDE"||el.id==="toolbar"||(el.tagName==="HEADER"&&el.classList.contains("top"))}); const h=cv.height*W/cv.width;
    if(h<=PH-2*M){ if(y+h>PH-M){ foot(); pdf.addPage(); page++; y=M; } pdf.addImage(cv.toDataURL("image/jpeg",0.92),"JPEG",M,y,W,h); y+=h+2; }
    else { const sliceH=Math.floor((PH-2*M)*cv.width/W); for(let sy=0;sy<cv.height;sy+=sliceH){ const c2=document.createElement("canvas"); c2.width=cv.width; c2.height=Math.min(sliceH,cv.height-sy); c2.getContext("2d").drawImage(cv,0,sy,cv.width,c2.height,0,0,cv.width,c2.height); const h2=c2.height*W/cv.width; if(y+h2>PH-M){ foot(); pdf.addPage(); page++; y=M; } pdf.addImage(c2.toDataURL("image/jpeg",0.92),"JPEG",M,y,W,h2); y+=h2+2; } } }
   foot(); root.remove();
